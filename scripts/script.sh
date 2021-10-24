@@ -22,14 +22,14 @@ iit_bn_ds="${ds_path}iit.bn/"
 
 #-----------------------------------bangla-----------------------------------------------
 #-----------------------------------natrual---------------------------------------------
-python datasets/bangla_writing.py $bw_ref $ds_path
-#python datagen.py $bw_ds 
-python datasets/boise_state.py $bs_ref $ds_path
-#python datagen.py $bs_ds 
-python datasets/bn_htr.py $bh_ref $ds_path
-#python datagen.py $bh_ds 
-python datasets/iit_indic.py $iit_bn_ref $ds_path
-#python datagen.py $iit_bn_ds 
+#python datasets/bangla_writing.py $bw_ref $ds_path
+python datagen.py $bw_ds 
+#python datasets/boise_state.py $bs_ref $ds_path
+python datagen.py $bs_ds 
+#python datasets/bn_htr.py $bh_ref $ds_path
+python datagen.py $bh_ds 
+#python datasets/iit_indic.py $iit_bn_ref $ds_path
+python datagen.py $iit_bn_ds 
 #-----------------------------------natrual---------------------------------------------
 
 #-----------------------------------synthetic------------------------------------------

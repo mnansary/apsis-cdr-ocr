@@ -161,7 +161,7 @@ def processImages(df,img_dim,ptype="left",factor=32):
     return df
 
 #---------------------------------------------------------------
-def processLabels(df,language,max_len):
+def processLabels(df,vocab,max_len):
     '''
         processLabels:
         * divides: word to - unicodes,components
@@ -171,51 +171,25 @@ def processLabels(df,language,max_len):
         g-->grapheme components
         r-->raw with out start end
     '''
-    GP=GraphemeParser(language)
+    GP=GraphemeParser(language=None)
     # process text
-    ## unicodes
-    df["unicodes"]=df.word.progress_apply(lambda x:[u for u in x])
     ## components
     df["components"]=df.word.progress_apply(lambda x:GP.process(x))
     df.dropna(inplace=True)
-    # label text
-    df["eu_label"]=df.unicodes.progress_apply(lambda x:encode_label(x,language.unicodes))
-    df["eg_label"]=df.components.progress_apply(lambda x:encode_label(x,language.components))
-    # pad encoded
-    ## pad raw
-    df["pru_label"]=df.eu_label.progress_apply(lambda x:pad_label(x,max_len,0,start_end_value=None))
-    df["prg_label"]=df.eg_label.progress_apply(lambda x:pad_label(x,max_len,0,start_end_value=None))
-    ## pad with start_end    
-    ### unicode
-    start_end_value=len(language.unicodes)+1
-    pad_value      =len(language.unicodes)+2
-    df["pu_label"]=df.eu_label.progress_apply(lambda x:pad_label(x,max_len,pad_value,start_end_value))
+    df["eg_label"]=df.components.progress_apply(lambda x:encode_label(x,vocab))
     ### grapheme
-    start_end_value=len(language.components)+1
-    pad_value      =len(language.components)+2
-    df["pg_label"]=df.eg_label.progress_apply(lambda x:pad_label(x,max_len,pad_value,start_end_value))
+    start_end_value=len(vocab)+1
+    pad_value      =len(vocab)+2
+    df["label"]=df.eg_label.progress_apply(lambda x:pad_label(x,max_len,pad_value,start_end_value))
     return df 
 
-def create_folds(df,num_folds):
-    '''
-        creates folding info
-    '''
-    sources=df.source.unique()
-    random.shuffle(sources)
-    LOG_INFO(f"unique sources:{len(sources)}")
-    len_folds=len(sources)//num_folds
-    for i in range(0, len(sources),len_folds):
-        fold_src= sources[i:i + len_folds]
-        df.source=df.source.progress_apply(lambda x:x if x not in fold_src else f"fold_{i//len_folds}")
-    df.source=df.source.progress_apply(lambda x:f"fold_{num_folds-1}" if int(x.split("_")[-1])==num_folds else x)
-    return df
-#---------------------------------------------------------------
-def processData(csv,language,max_len,img_dim,num_folds=None,return_df=False):
+#------------------------------------------------
+def processData(csv,vocab,max_len,img_dim):
     '''
         processes the dataset
         args:
             csv         :   a csv file that contains filepath,word,source data
-            language    :   language class
+            vocab       :   language class
             max_len     :   model max_len
             img_dim     :   tuple of (img_height,img_width) 
             num_folds   :   creating folds of the data
@@ -224,19 +198,11 @@ def processData(csv,language,max_len,img_dim,num_folds=None,return_df=False):
     # images
     df=processImages(df,img_dim)
     # labels
-    df=processLabels(df,language,max_len)
-    if num_folds is not None:
-        df=create_folds(df,num_folds=num_folds)
+    df=processLabels(df,vocab,max_len)
     # save data
-    cols=["filepath","word","mask","pu_label","pg_label","pru_label","prg_label"]
-    if "source" in df.keys():
-        cols.append("source")
-        # add fold info
+    cols=["filepath","mask","label"]
     df=df[cols]
     df.dropna(inplace=True)
     df.to_csv(csv,index=False)
     LOG_INFO(f"Not Found:{not_found}")
-    if return_df:
-        return df
-    else: 
-        return csv
+    return df

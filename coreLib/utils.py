@@ -81,9 +81,14 @@ def str2bool(v):
 #---------------------------------------------------------------
 # text utils
 #---------------------------------------------------------------
-
+class baselang:
+    vowel_diacritics       =    ['া', 'ি', 'ী', 'ু', 'ূ', 'ৃ', 'ে', 'ৈ', 'ো', 'ৌ']
+    consonant_diacritics   =    ['ঁ', 'র্', 'র্য', '্য', '্র', '্র্য', 'র্্র']
+    modifiers              =    []
+    connector              =    '্'
+    
 class GraphemeParser(object):
-    def __init__(self,language):
+    def __init__(self,language=None):
         '''
             initializes a grapheme parser for a given language
             args:
@@ -94,6 +99,8 @@ class GraphemeParser(object):
                                 and 
                                 4. connector 
         '''
+        if language==None:
+            language=baselang
         # assignment
         self.vds=language.vowel_diacritics 
         self.cds=language.consonant_diacritics

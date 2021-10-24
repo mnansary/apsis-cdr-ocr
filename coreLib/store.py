@@ -19,8 +19,8 @@ tqdm.pandas()
 #---------------------------------------------------------------
 # data functions
 #---------------------------------------------------------------
-cols=["filepath","word","mask","pu_label","pg_label","pru_label","prg_label"]
-eval_cols=cols[2:]
+cols=["filepath","mask","label"]
+eval_cols=cols[1:]
     
 # feature fuctions
 def _bytes_feature(value):
@@ -54,10 +54,7 @@ def toTfrecord(df,rnum,rec_path):
                 if col in eval_cols:
                     data[col]=_int64_list_feature(df.iloc[idx,cidx]) 
 
-            file_iden=os.path.basename(img_path)
-            file_iden=int(file_iden.split(".")[0])
-            data["img_iden"]=_int64_list_feature([file_iden])
-
+            
             features=tf.train.Features(feature=data)
             example= tf.train.Example(features=features)
             serialized=example.SerializeToString()
@@ -75,20 +72,11 @@ def createRecords(data,save_path,tf_size=10240):
         for col in eval_cols:
             data[col]=data[col].progress_apply(lambda x: literal_eval(x))
     
-    if "source" not in data.columns:
-        LOG_INFO(f"Creating TFRECORDS No folds:{save_path}")
-        for idx in tqdm(range(0,len(data),tf_size)):
-            df        =   data.iloc[idx:idx+tf_size]  
-            rnum      =   idx//tf_size
-            toTfrecord(df,rnum,save_path)
-    else:
-        for fold in tqdm(data.source.unique()):
-            LOG_INFO(f"TFRecords:{fold}")
-            fold_df=data.loc[data["source"]==fold]
-            for idx in range(0,len(fold_df),tf_size):
-                df        =   fold_df.iloc[idx:idx+tf_size]  
-                rnum      =   idx//tf_size
-                toTfrecord(df,f"{fold}_{rnum}",save_path)
+    LOG_INFO(f"Creating TFRECORDS No folds:{save_path}")
+    for idx in tqdm(range(0,len(data),tf_size)):
+        df        =   data.iloc[idx:idx+tf_size]  
+        rnum      =   idx//tf_size
+        toTfrecord(df,rnum,save_path)
 
     
     
