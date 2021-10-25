@@ -20,7 +20,7 @@ tqdm.pandas()
 #--------------------
 # helpers
 #--------------------
-def createImgFromComps(df,comps,pad):
+def createImgFromComps(df,comps,pad,use_box=False):
     '''
         creates a synthetic image from given comps
         args:
@@ -98,6 +98,13 @@ def createImgFromComps(df,comps,pad):
         elif hf=="bt" or hf=="tb":
             img=cv2.resize(img,pad.double_pad_dim,fx=0,fy=0, interpolation = cv2.INTER_NEAREST)
         
+        if use_box:
+            p=random.randint(1,5)
+            h,w=img.shape
+            back=np.ones_like(img)*255
+            back[p:h-p,p:w-p]=img[p:h-p,p:w-p]
+            img=np.copy(back)
+
         cimgs.append(img)
 
     img=np.concatenate(cimgs,axis=1)
@@ -166,7 +173,9 @@ def createSyntheticData(iden,
                         pad_height=20,
                         use_only_graphemes=False,
                         use_only_numbers=False,
-                        use_all=True):
+                        use_all=True,
+                        fname_offset=0,
+                        return_df=False):
     '''
         creates: 
             * handwriten word image
@@ -225,7 +234,7 @@ def createSyntheticData(iden,
     # dataframe vars
     filepaths=[]
     words=[]
-    fiden=0
+    fiden=0+fname_offset
     # loop
     for idx in tqdm(range(len(dictionary))):
         try:
@@ -245,5 +254,8 @@ def createSyntheticData(iden,
         except Exception as e:
             LOG_INFO(e)
     df=pd.DataFrame({"filepath":filepaths,"word":words})
-    df.to_csv(os.path.join(save.csv),index=False)
-    return save.csv
+    if return_df:
+        return df,fname_offset,save.csv
+    else:
+        df.to_csv(os.path.join(save.csv),index=False)
+        return save.csv

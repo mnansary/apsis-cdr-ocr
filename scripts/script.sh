@@ -30,7 +30,7 @@ iit_bn_ds="${ds_path}iit.bn/"
 #python datagen.py $bh_ds 
 #python datasets/iit_indic.py $iit_bn_ref $ds_path
 #python datagen.py $iit_bn_ds 
-python create_recs.py $bn_hr_ds "bn.synth"
+#python create_recs.py $bn_hr_ds "bn.synth"
 
 #-----------------------------------natrual---------------------------------------------
 
