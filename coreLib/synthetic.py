@@ -131,13 +131,31 @@ def createBoxedImage(df,comps):
     imgs=[cv2.imread(img_path,0) for img_path in img_paths]
     box_map=create_labeled_box(len(comps))
     midxs=sorted(np.unique(box_map))[2:]
+
+    h,_=box_map.shape
+    mask=np.zeros_like(box_map) 
     for img,midx in zip(imgs,midxs):
-        xs,ys=np.where(box_map)
-
-
-    
-    
-
+        # placement
+        idx = np.where(box_map==midx)                
+        x_min,x_max = np.min(idx[1]), np.max(idx[1])
+        y_min,y_max=0,h
+        w=x_max-x_min
+        img=255-img
+        img[img==255]=1
+        # pad
+        if random.choice([0,1])==1:
+            pad_dim=random.randint(5,20)
+            img=padAllAround(img,pad_dim,0)
+        # fix
+        img=cv2.resize(img,(w,h))
+        mask[y_min:y_max,x_min:x_max]=img
+        
+    mask[box_map==0]=2
+    img=np.ones((h,w,3))*255
+    img[mask==2]=randColor()
+    img[mask==1]=randColor(col=False)
+    img=img.astype("uint8")
+    return img
 
 def createFontImageFromComps(font,comps):
     '''
@@ -203,7 +221,8 @@ def createSyntheticData(iden,
                         use_only_numbers=False,
                         use_all=True,
                         fname_offset=0,
-                        return_df=False):
+                        return_df=False,
+                        create_boxed=False):
     '''
         creates: 
             * handwriten word image
@@ -271,8 +290,11 @@ def createSyntheticData(iden,
                 font=PIL.ImageFont.truetype(random.choice(ds.fonts),comp_dim)
                 img=createFontImageFromComps(font,comps)    
             else:
-                # image
-                img=createImgFromComps(df=ds.df,comps=comps,pad=pad)
+                if create_boxed:
+                    img=createBoxedImage(ds.df,comps)
+                else:
+                    # image
+                    img=createImgFromComps(df=ds.df,comps=comps,pad=pad)
             # save
             fname=f"{fiden}.png"
             cv2.imwrite(os.path.join(save.img,fname),img)

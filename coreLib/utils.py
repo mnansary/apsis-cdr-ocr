@@ -3,6 +3,7 @@
 @author:MD.Nazmuddoha Ansary
 """
 from __future__ import print_function
+from random import random
 #---------------------------------------------------------------
 # imports
 #---------------------------------------------------------------
@@ -33,6 +34,18 @@ def create_dir(base,ext):
         os.mkdir(_path)
     return _path
 
+def randColor(col=True):
+    '''
+        generates random color
+    '''
+    if col:
+        return (random.randint(0,255),random.randint(0,255),random.randint(0,255))
+    else:
+        d=random.randint(0,64)
+        return (d,d,d)
+
+def random_exec(poplutation=[0,1],weights=[0.7,0.3],match=0):
+    return random.choices(population=poplutation,weights=weights,k=1)[0]==match
 #---------------------------------------------------------------
 # image utils
 #---------------------------------------------------------------
