@@ -64,23 +64,35 @@ class DotAttention(tf.keras.layers.Layer):
         return output
 
 class RobustScanner(object):
-    def __init__(self,model_dir):
+    def __init__(self,model_dir,
+                      img_height=64,
+                      img_width=512,
+                      nb_channels=3,
+                      pos_max=40,
+                      use_feat_reduce=True,
+                      vocab=None):
         
         #-------------
         # config-globals
         #-------------
-        with open(os.path.join(model_dir,"rec","vocab.json")) as f:
-            vocab = json.load(f)["vocab"]    
+        if vocab is None:
+            with open(os.path.join(model_dir,"rec","vocab.json")) as f:
+                vocab = json.load(f)["vocab"]    
         self.vocab=vocab
 
         #-------------------
         # fixed params
         #------------------
-        self.img_height  =  64
-        self.img_width   =  512
-        self.nb_channels =  3
-        self.pos_max     =  40          
-        self.enc_filters =  256
+        self.img_height  =  img_height
+        self.img_width   =  img_width
+        self.nb_channels =  nb_channels
+        self.pos_max     =  pos_max
+
+        self.use_feat_reduce=use_feat_reduce 
+        if self.use_feat_reduce:
+            self.enc_filters =  256
+        else:
+            self.enc_filters =  1024
         self.factor      =  32
 
         # calculated
@@ -131,7 +143,8 @@ class RobustScanner(object):
         # feat_out
         enc=backbone.output
         # enc 
-        enc=tf.keras.layers.Conv2D(self.enc_filters,kernel_size=3,padding="same")(enc)
+        if self.use_feat_reduce:
+            enc=tf.keras.layers.Conv2D(self.enc_filters,kernel_size=3,padding="same")(enc)
         return tf.keras.Model(inputs=img,outputs=enc,name="rs_encoder")
 
     def seq_decoder(self):
@@ -213,7 +226,32 @@ class RobustScanner(object):
         return tf.keras.Model(inputs=[gt_attn,pt_attn],outputs=x,name="rs_fusion")
 
 
+    def process_images(self,img_list):
+        images=[]
+        masks=[]
+        poss=[]
+            
+        for word in tqdm(img_list):
+            # word
+            word,vmask=padWords(word,(self.img_height,self.img_width),ptype="left")
+            word=np.expand_dims(word,axis=0) 
+            # image
+            images.append(word)
+            # mask
+            vmask=math.ceil((vmask/self.img_width)*(self.img_width//self.factor))
+            mask_dim=(self.img_height//self.factor,self.img_width//self.factor)
+            imask=np.zeros(mask_dim)
+            imask[:,:vmask]=1
+            imask=imask.flatten().tolist()
+            imask=[1-int(i) for i in imask]
+            imask=np.stack([imask for _ in range(self.pos_max)])
+            masks.append(imask)
+            # pos
+            pos=[i for i in np.arange(0,self.pos_max)]
+            poss.append(pos)  
         
+        return images,masks,poss
+
     def porcess_data(self,img,boxes):
         self.boxes=boxes
         images=[]
@@ -276,13 +314,20 @@ class RobustScanner(object):
             texts.append("".join([self.vocab[l] for l in _label]))
         return texts
 
-    def recognize(self,img,boxes,batch_size=32,infer_len=20):
+    def recognize(self,img,boxes,batch_size=32,infer_len=20,image_list=None):
         '''
             final wrapper
         '''
+        if image_list is not None:
+            assert img is None
+            assert boxes is None
+
         texts=[]
-        images,masks,poss=self.porcess_data(img,boxes)
-        
+        if image_list is None:
+            images,masks,poss=self.porcess_data(img,boxes)
+        else:
+            images,masks,poss=self.process_images(image_list)
+            
         for idx in tqdm(range(0,len(images),batch_size)):
             batch={}
             # image
@@ -300,3 +345,5 @@ class RobustScanner(object):
             # recog
             texts+=self.predict_on_batch(batch,infer_len)
         return texts
+
+    
