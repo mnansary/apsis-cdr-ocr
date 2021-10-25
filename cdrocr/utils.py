@@ -109,7 +109,8 @@ def threshold_image(img,blur):
     if blur:
         img = cv2.GaussianBlur(img,(5,5),0)
     _,img = cv2.threshold(img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-    return img#---------------------------------------------------------------
+    return img
+#---------------------------------------------------------------
 # detection utils
 #---------------------------------------------------------------
 def padDetectionImage(img):
