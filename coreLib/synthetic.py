@@ -163,7 +163,10 @@ def createSyntheticData(iden,
                         dict_max_len=10,
                         dict_min_len=1,
                         comp_dim=64,
-                        pad_height=20):
+                        pad_height=20,
+                        use_only_graphemes=False,
+                        use_only_numbers=False,
+                        use_all=True):
     '''
         creates: 
             * handwriten word image
@@ -194,10 +197,20 @@ def createSyntheticData(iden,
     if data_type=="printed":
         ds=DataSet(data_dir,language.iden,use_printed_only=True)
         pad=None
-        valid_graphemes=language.valid
+        if use_all:
+            valid_graphemes=language.valid
+        elif use_only_graphemes:
+            valid_graphemes=language.dict_graphemes
+        elif use_only_numbers:
+            valid_graphemes=language.numbers
     else:
         ds=DataSet(data_dir,language.iden)
-        valid_graphemes=ds.valid_graphemes
+        if use_all:
+            valid_graphemes=ds.valid_graphemes
+        elif use_only_graphemes:
+            valid_graphemes=ds.graphemes_list
+        elif use_only_numbers:
+            valid_graphemes=ds.numbers_list
         # pad
         class pad:
             no_pad_dim      =(comp_dim,comp_dim)
