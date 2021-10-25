@@ -56,7 +56,7 @@ def main(args):
                         use_all=False,
                         use_only_numbers=True,
                         return_df=True,
-                        use_box=True)
+                        create_boxed=True)
     # data creation en num
     language=languages["english"]
     df2,csv=createSyntheticData(iden=iden,
@@ -73,17 +73,17 @@ def main(args):
                         use_only_numbers=True,
                         fname_offset=num_samples,
                         return_df=True,
-                        use_box=True)
+                        create_boxed=True)
     
     df=pd.concat([df1,df2],ignore_index=True)
     df.to_csv(csv,index=False)
 
     # processing
-    #df=processData(csv,vocab,seq_max_len,img_dim)
+    df=processData(csv,vocab,seq_max_len,img_dim)
     # storing
-    #save_path=os.path.dirname(csv)
-    #save_path=create_dir(save_path,iden)
-    #createRecords(df,save_path)
+    save_path=os.path.dirname(csv)
+    save_path=create_dir(save_path,iden)
+    createRecords(df,save_path)
 
 #-----------------------------------------------------------------------------------
 

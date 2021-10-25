@@ -3,7 +3,6 @@
 @author:MD.Nazmuddoha Ansary
 """
 from __future__ import print_function
-from random import random
 #---------------------------------------------------------------
 # imports
 #---------------------------------------------------------------
@@ -12,6 +11,7 @@ import os
 import cv2 
 import numpy as np
 from tqdm import tqdm
+import random
 #---------------------------------------------------------------
 def LOG_INFO(msg,mcolor='blue'):
     '''

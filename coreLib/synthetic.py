@@ -17,6 +17,7 @@ from .languages import languages
 import PIL
 import PIL.Image , PIL.ImageDraw , PIL.ImageFont 
 tqdm.pandas()
+import matplotlib.pyplot as plt
 #--------------------
 # helpers
 #--------------------
@@ -151,10 +152,12 @@ def createBoxedImage(df,comps):
         mask[y_min:y_max,x_min:x_max]=img
         
     mask[box_map==0]=2
+    h,w=mask.shape
     img=np.ones((h,w,3))*255
     img[mask==2]=randColor()
     img[mask==1]=randColor(col=False)
     img=img.astype("uint8")
+    img=cv2.GaussianBlur(img,(5,5),0) 
     return img
 
 def createFontImageFromComps(font,comps):
@@ -305,7 +308,7 @@ def createSyntheticData(iden,
             LOG_INFO(e)
     df=pd.DataFrame({"filepath":filepaths,"word":words})
     if return_df:
-        return df,fname_offset,save.csv
+        return df,save.csv
     else:
         df.to_csv(os.path.join(save.csv),index=False)
         return save.csv
