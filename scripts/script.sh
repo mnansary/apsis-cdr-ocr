@@ -5,6 +5,7 @@ bh_ref="/home/apsisdev/ansary/DATASETS/RAW/BN-HTR/"
 bs_ref="/home/apsisdev/ansary/DATASETS/RAW/BanglaC/README.txt"
 iit_path="/home/apsisdev/Rezwan/cvit_iiit-indic/"
 save_path="/home/apsisdev/ansary/DATASETS/APSIS/CDR/"
+nb_dir="/home/apsisdev/ansary/DATASETS/APSIS/Recognition/source/base/"
 #iit_path="/media/ansary/DriveData/Work/APSIS/datasets/__raw__/bengal/iiit-indic/"
 #base_path="/media/ansary/DriveData/Work/APSIS/datasets/GVU/"
 #-----------------------------------------------------------------------------------------------
@@ -15,7 +16,7 @@ bh_ds="${ds_path}bh/"
 bs_ds="${ds_path}bs/"
 bn_pr_ds="${ds_path}bangla_printed/"
 bn_hr_ds="${ds_path}bn.synth/"
-
+nb_ds="${ds_path}nb.synth/"
 
 iit_bn_ref="${iit_path}bn/vocab.txt"
 iit_bn_ds="${ds_path}iit.bn/"
@@ -37,6 +38,8 @@ iit_bn_ds="${ds_path}iit.bn/"
 #-----------------------------------synthetic------------------------------------------
 #python datagen_synth.py $data_dir "bangla" "printed" $ds_path --num_samples 1000000
 #python datagen_synth.py $data_dir "bangla" "handwritten" $ds_path --num_samples 500000
+python datagen_num.py $nb_dir $ds_path --num_samples 10
+
 #-----------------------------------synthetic------------------------------------------
 #-----------------------------------bangla-----------------------------------------------
 

@@ -68,6 +68,38 @@ def removeShadow(img):
     result_norm = cv2.merge(result_norm_planes)
     return result_norm
 
+def padAllAround(img,pad_dim,pad_val,pad_single=None):
+    '''
+        pads all around the image
+    '''
+    if pad_single is None:
+        h,w=img.shape
+        # pads
+        left_pad =np.ones((h,pad_dim))*pad_val
+        right_pad=np.ones((h,pad_dim))*pad_val
+        # pad
+        img =np.concatenate([left_pad,img,right_pad],axis=1)
+        # shape
+        h,w=img.shape
+        top_pad =np.ones((pad_dim,w))*pad_val
+        bot_pad=np.ones((pad_dim,w))*pad_val
+        # pad
+        img =np.concatenate([top_pad,img,bot_pad],axis=0)
+    elif pad_single=="tb":
+        # shape
+        h,w=img.shape
+        top_pad =np.ones((pad_dim,w))*pad_val
+        bot_pad=np.ones((pad_dim,w))*pad_val
+        # pad
+        img =np.concatenate([top_pad,img,bot_pad],axis=0)
+    else:
+        h,w=img.shape
+        # pads
+        left_pad =np.ones((h,pad_dim))*pad_val
+        right_pad=np.ones((h,pad_dim))*pad_val
+        # pad
+        img =np.concatenate([left_pad,img,right_pad],axis=1)
+    return img
 #---------------------------------------------------------------
 # parsing utils
 #---------------------------------------------------------------

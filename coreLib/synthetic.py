@@ -20,7 +20,20 @@ tqdm.pandas()
 #--------------------
 # helpers
 #--------------------
-def createImgFromComps(df,comps,pad,use_box=False):
+def create_labeled_box(num_box,bsize=96,thickness=4,pad=2):
+    labeled=[]
+    side=random.randint(0,20)
+    for i in range(num_box):
+        iden=i+2
+        box=np.ones((bsize,bsize))*iden
+        box=padAllAround(box,thickness,0)
+        box=padAllAround(box,pad,1)
+        labeled.append(box)
+    box=np.concatenate(labeled,axis=-1)
+    box=padAllAround(box,side,1,pad_single="tb")
+    return  box.astype("uint8")
+
+def createImgFromComps(df,comps,pad):
     '''
         creates a synthetic image from given comps
         args:
@@ -98,17 +111,32 @@ def createImgFromComps(df,comps,pad,use_box=False):
         elif hf=="bt" or hf=="tb":
             img=cv2.resize(img,pad.double_pad_dim,fx=0,fy=0, interpolation = cv2.INTER_NEAREST)
         
-        if use_box:
-            p=random.randint(1,5)
-            h,w=img.shape
-            back=np.ones_like(img)*255
-            back[p:h-p,p:w-p]=img[p:h-p,p:w-p]
-            img=np.copy(back)
-
         cimgs.append(img)
 
     img=np.concatenate(cimgs,axis=1)
     return img 
+
+def createBoxedImage(df,comps):
+    # get img_paths
+    img_paths=[]
+    for comp in comps:
+        cdf=df.loc[df.label==comp]
+        cdf=cdf.sample(frac=1)
+        if len(cdf)==1:
+            img_paths.append(cdf.iloc[0,2])
+        else:
+            img_paths.append(cdf.iloc[random.randint(0,len(cdf)-1),2])
+    
+    # get images
+    imgs=[cv2.imread(img_path,0) for img_path in img_paths]
+    box_map=create_labeled_box(len(comps))
+    midxs=sorted(np.unique(box_map))[2:]
+    for img,midx in zip(imgs,midxs):
+        xs,ys=np.where(box_map)
+
+
+    
+    
 
 
 def createFontImageFromComps(font,comps):

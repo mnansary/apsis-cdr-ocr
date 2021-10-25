@@ -22,6 +22,7 @@ from coreLib.synthetic import createSyntheticData
 from coreLib.languages import languages
 from coreLib.processing import processData
 from coreLib.store import createRecords
+from coreLib.languages import vocab
 tqdm.pandas()
 #--------------------
 # main
@@ -36,13 +37,13 @@ def main(args):
     num_samples =   int(args.num_samples)
     dict_max_len=   int(args.dict_max_len)
     dict_min_len=   int(args.dict_min_len)
-    iden        =   args.iden
     seq_max_len =   int(args.seq_max_len)
     
     img_dim=(img_height,img_width)
+    iden        =   "nb.synth"
     # data creation bn num
     language=languages["bangla"]
-    df1,off,csv=createSyntheticData(iden=iden,
+    df1,csv=createSyntheticData(iden=iden,
                         save_dir=save_path,
                         data_type="handwritten",
                         data_dir=data_dir,
@@ -54,10 +55,11 @@ def main(args):
                         pad_height=pad_height,
                         use_all=False,
                         use_only_numbers=True,
-                        return_df=True)
+                        return_df=True,
+                        use_box=True)
     # data creation en num
-    language=languages["bangla"]
-    df2,_,csv=createSyntheticData(iden=iden,
+    language=languages["english"]
+    df2,csv=createSyntheticData(iden=iden,
                         save_dir=save_path,
                         data_type="handwritten",
                         data_dir=data_dir,
@@ -69,18 +71,19 @@ def main(args):
                         pad_height=pad_height,
                         use_all=False,
                         use_only_numbers=True,
-                        fname_offset=off,
-                        return_df=True)
+                        fname_offset=num_samples,
+                        return_df=True,
+                        use_box=True)
     
     df=pd.concat([df1,df2],ignore_index=True)
     df.to_csv(csv,index=False)
 
     # processing
-    df=processData(csv,language,seq_max_len,img_dim,return_df=True)
+    #df=processData(csv,vocab,seq_max_len,img_dim)
     # storing
-    save_path=os.path.dirname(csv)
-    save_path=create_dir(save_path,iden)
-    createRecords(df,save_path)
+    #save_path=os.path.dirname(csv)
+    #save_path=create_dir(save_path,iden)
+    #createRecords(df,save_path)
 
 #-----------------------------------------------------------------------------------
 
