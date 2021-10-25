@@ -22,16 +22,25 @@ class BaseDetector(object):
                 model_weights,
                 img_dim,
                 data_channel,
-                backbone='densenet121'):
+                backbone='densenet121',
+                use_cpu=True):
         # craft with unet
         self.img_dim=img_dim
         self.data_channel=data_channel
         self.backbone=backbone
-        strategy = tf.distribute.OneDeviceStrategy(device="/CPU:0")
-        with strategy.scope():
+        if use_cpu:
+            strategy = tf.distribute.OneDeviceStrategy(device="/CPU:0")
+            with strategy.scope():
+                self.model=sm.Unet(self.backbone,input_shape=self.img_dim, classes=self.data_channel,encoder_weights=None)
+                self.model.load_weights(model_weights)
+        else:
+            gpus = tf.config.experimental.list_physical_devices('GPU')
+            print(gpus)
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
             self.model=sm.Unet(self.backbone,input_shape=self.img_dim, classes=self.data_channel,encoder_weights=None)
             self.model.load_weights(model_weights)
-            
+
 
 class CRAFT(BaseDetector):
     def __init__(self, model_weights, img_dim=(1024,1024,3), data_channel=2, backbone="densenet121"):

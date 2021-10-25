@@ -20,6 +20,7 @@ nb_ds="${ds_path}nb.synth/"
 en_ds="${ds_path}en.words/"
 iit_bn_ref="${iit_path}bn/vocab.txt"
 iit_bn_ds="${ds_path}iit.bn/"
+cdr_ds="${ds_path}cdr/"
 
 #-----------------------------------bangla-----------------------------------------------
 #-----------------------------------natrual---------------------------------------------
@@ -33,12 +34,13 @@ iit_bn_ds="${ds_path}iit.bn/"
 #python datagen.py $iit_bn_ds 
 #python create_recs.py $bn_hr_ds "bn.synth"
 #python datagen.py $en_ds 
+python datagen.py $cdr_ds 
 #-----------------------------------natrual---------------------------------------------
 
 #-----------------------------------synthetic------------------------------------------
 #python datagen_synth.py $data_dir "bangla" "printed" $ds_path --num_samples 1000000
 #python datagen_synth.py $data_dir "bangla" "handwritten" $ds_path --num_samples 500000
-python datagen_num.py $nb_dir $ds_path --num_samples 50000
+#python datagen_num.py $nb_dir $ds_path --num_samples 50000
 
 #-----------------------------------synthetic------------------------------------------
 #-----------------------------------bangla-----------------------------------------------
