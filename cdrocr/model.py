@@ -58,103 +58,91 @@ class OCR(object):
         except Exception as e:
             LOG_INFO(f"EXECUTION EXCEPTION: {e}",mcolor="red")
 
-        
-    '''
-            seg=seg[:y_max,:]
-            h,w=seg.shape
-            ref=img[:h,:w]
-            #base_img[reg_h:,:]=(255,255,255)
-            #ref=cv2.resize(img,(w//2,h//2))
-    '''
-
-    
-    def getCrops(self,img,db_only,debug=False):
+            
+    def getCrops(self,img,debug=False,h_thresh=0.8):
         '''
             detection wrapper
         '''
         base_img=np.copy(img)
         data=self.loc.crop(img,debug=debug)
         if data is None:
-            return None
+            return "LOG:locator failed to locate name,age and number region: more image training data needed"
         else:
             try:
                 reg_h=data
                 # dbnet
-                dt_boxes,_= self.dbdet.text_detector(img)
+                dt_boxes,_= self.dbdet.text_detector(img) 
                 dt_boxes=sorted_boxes(dt_boxes)
                 # store crops
-                crops,hs,ws=[],[],[]
+                crops=[]
+                crop_boxes=[]
                 for bno in range(len(dt_boxes)):
                     tmp_box = copy.deepcopy(dt_boxes[bno])
                     y_min=int(min(tmp_box[:,1]))    
                     # filter based on region                
-                    if y_min>reg_h:
+                    if y_min<reg_h:
                         img_crop = get_rotate_crop_image(img,tmp_box)
-                        h,w,d=img_crop.shape
-                        hs.append(h)
-                        ws.append(w)
                         crops.append(img_crop)
+                        crop_boxes.append(tmp_box)
                         if debug:
                             plt.imshow(img_crop)
                             plt.show()
                 # number for reference
-                num_idx=ws.index(max(ws))
-                number=crops[num_idx]
+                number=crops[-1]
                 hf,_,_=number.shape
+                if debug:
+                    plt.imshow(number)
+                    plt.show()
                 # filter base_img
-                nbox=dt_boxes[num_idx]
-                x_max=int(max(nbox[:,0]))
-                x_min=int(min(nbox[:,0]))
-                y_max=int(max(nbox[:,1]))
-                y_min=int(min(nbox[:,1]))                    
-                base_img[y_min:,:]=(255,255,255)
+                y_reg=int(min(crop_boxes[-1][:,1]))    
+                base_img[y_reg:,:]=(255,255,255)
                 if debug:
                     plt.imshow(base_img)
                     plt.show()
-                # craft input
-                ref=remove_shadows(base_img)
-                ref=threshold_image(ref,blur=True)
-                ref=255-ref
-                y_min,y_max,x_min,x_max=locateData(ref,0)
-                img=base_img[y_min:y_max,x_min:x_max]
+
+                # craft det
+                boxes=self.det.detect(base_img,debug=debug)
+                ref_boxes=[]
+                words=[]
+                for box in boxes:
+                    x1,y1,x2,y2=box
+                    hw=y2-y1
+                    # filter
+                    if hw/hf>h_thresh: 
+                        word=base_img[y1:y2,x1:x2]
+                        ref_boxes.append(box)
+                        words.append(word)
+                        if debug:
+                            plt.imshow(word)
+                            plt.show()
+                # last one should be age
+                ref_boxes,words=zip(*sorted(zip(ref_boxes,words),key=lambda x: x[0][1]))
+                age=words[-1]
+                # the rest are name
+                ref_boxes,words=zip(*sorted(zip(ref_boxes[:-1],words[:-1]),key=lambda x: x[0][0]))
+
+                if debug:
+                    print("Data:")
+                    plt.imshow(age)
+                    plt.show()
+                    for word in words:
+                        plt.imshow(word)
+                        plt.show()
                 
-                # collect boxes to filter
-                data=[]
-                boxes=[]
-                for bno in range(len(dt_boxes)):
-                    crop=crops[bno]
-                    h,w,d=crop.shape
-                    if h>hf/2:
-                        data.append(crop)
-                        box=dt_boxes[bno]
-                        x_max=int(max(box[:,0]))
-                        x_min=int(min(box[:,0]))
-                        y_max=int(max(box[:,1]))
-                        y_min=int(min(box[:,1]))                    
-                        box=[x_min,y_min,x_max,y_max]
-                        boxes.append(box)
-                
-                age=data[-2]
-                names=data[:-2]
-                boxes=boxes[:-2]
-                boxes,names = zip(*sorted(zip(boxes,names),key=lambda x: x[0][0]))
-                boxes=list(boxes)
-                names=list(names)
                 img_list=[]
-                img_list+=[number]+[age]+names
+                img_list+=[number]+[age]+words
                 if debug:
                     for img in img_list:
                         plt.imshow(img)
                         plt.show()
-                if db_only:
-                    return img_list
+                
             except Exception as e:
                 print(e)
-                return None
+                return "LOG:Problem while cropping words: more image training data needed"
         
     
 
-    def extract(self,img,db_only=True,batch_size=32,debug=False):
+    def extract(self,img,batch_size=32,debug=False,h_thresh=0.8):
         '''
             predict based on datatype
             args:
@@ -167,9 +155,9 @@ class OCR(object):
         # dims
         img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
         # img_list
-        imgs=self.getCrops(img,db_only=db_only,debug=debug)        
-        if imgs is None:
-            return None
+        imgs=self.getCrops(img,debug=debug,h_thresh=h_thresh)        
+        if type(imgs)==str:
+            return imgs
         else:
             texts=self.rec.recognize(None,None,image_list=imgs)
             number=texts[0]

@@ -18,12 +18,16 @@ from cdrocr.model import OCR
 app = Flask(__name__)
 
 ocr=OCR("models/")
+EN_NUMS=["0","1","2","3","4","5","6","7","8","9"]
+BN_NUMS=['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯']
+
 @app.route('/', methods=['GET'])
 def index():
     # Main page
     return render_template('index.html')
 
-NUMS=["0","1","2","3","4","5","6","7","8","9",'০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯']
+
+
 @app.route('/predict', methods=['GET', 'POST'])
 def upload():
     if request.method == 'POST':
@@ -36,43 +40,44 @@ def upload():
         f.save(file_path)
         data=ocr.extract(file_path)
         response={}
-        if data is None:
-            response["error"]="problem reading file (segmentation problem)"
-            response["recognizer"]="Word Recognition working acurately!(double check)-could be an invalid image"
-            response["locator"]="Couldn't locate number"
-            response["detector"]="Number split up due to resolution or improper image"
+        if type(data)==str:
+            response["error"]=data
         else:
             number_ret=True
             age_ret=True
             number,age,name=data
+            # check number
             for n in number:
-                nn=[]
-                if n not in NUMS:
+                rec_num=[]
+                if n not in EN_NUMS+BN_NUMS:
                     number_ret=False
                 else:
-                    nn.append(n)
+                    rec_num.append(n)
+            
+            if number_ret:
+                assert len(number)==len(rec_num)
+                if len(number)!=11:
+                    response["number"]=f"Full Mobile Number not found:Recognized numbers:{''.join(rec_num)}"
+                else:
+                    response["number"]=number
 
+            # check age
             for n in age:
-                aa=[]
-                if n not in NUMS:
+                rec_age=[]
+                if n not in EN_NUMS+BN_NUMS:
                     age_ret=False
                 else:
-                    aa.append(n)
-            if len(aa)!=2:
-                age_ret=False
-
-            if number_ret:
-                response["Mobile Number"]=number
-            else:
-                response["LOG:ocr-recognition"]=f"Working good.Number Recognition:{''.join(nn)}"    
-                response["detector-error"]="Number split up due to resolution or improper image(Need more training images for location)"
-            response["Name"]=name
+                    rec_age.append(n)
+            
             if age_ret:
-                response["Age"]=age
-            else:
-                response["LOG:ocr-recognition"]=f"Working good:{age}"    
-                response["locator-error"]="Age position ambogious(Need more training images for location)"
-
+                assert len(age)==len(rec_age)
+                if len(number)!=2:
+                    response["age"]=f"Full Age not found:Recognized numbers:{''.join(rec_num)}"
+                else:
+                    response["age"]=age
+            # chek name
+            response["Name"]=name
+            
             
         print(response)
         return jsonify(response)
