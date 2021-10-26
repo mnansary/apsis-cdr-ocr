@@ -59,7 +59,7 @@ class OCR(object):
         
 
     
-    def getCrops(self,img,db_only=True,debug=False):
+    def getCrops(self,img,db_only,debug=False):
         '''
             detection wrapper
         '''
@@ -138,7 +138,7 @@ class OCR(object):
         # dims
         img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
         # img_list
-        imgs=self.getCrops(self,img,db_only=db_only)        
+        imgs=self.getCrops(img,db_only=db_only,debug=debug)        
         if imgs is None:
             return None
         else:
