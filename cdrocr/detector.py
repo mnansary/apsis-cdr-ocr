@@ -12,8 +12,9 @@ import numpy as np
 import cv2 
 os.environ['SM_FRAMEWORK'] = 'tf.keras'
 import segmentation_models as sm
-from .utils import LOG_INFO,padDetectionImage
+from .utils import *
 import matplotlib.pyplot as plt
+from scipy.special import softmax
 #-------------------------
 # model
 #------------------------
@@ -121,7 +122,7 @@ class Locator(BaseDetector):
         super().__init__(model_weights, img_dim, data_channel, backbone=backbone,use_cpu=use_cpu)
         LOG_INFO("Loaded Detection Model,Locator",mcolor="green")
     
-    def detect(self,img):
+    def crop(self,img):
         '''
         detects regions from an image
         args:
@@ -137,4 +138,14 @@ class Locator(BaseDetector):
         data=np.expand_dims(data,axis=0)
         data=data/255
         pred=self.model.predict(data)[0]
-        return pred
+        seg=softmax(pred,axis=-1)
+        seg =np.argmax(seg,axis=-1)
+        seg=cv2.resize(seg,(org_w,org_h))
+        if cfg is not None:
+            if cfg["pad"]=="height":
+                seg=seg[:cfg["dim"],:]
+            else:
+                seg=seg[:,:cfg["dim"]]
+        y_min,y_max,x_min,x_max=locateData(seg,0)
+        img=img[:y_max,:]
+        return img
