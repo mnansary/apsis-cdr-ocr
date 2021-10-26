@@ -130,7 +130,7 @@ class OCR(object):
                         plt.show()
                 
                 img_list=[]
-                img_list+=[number]+[age]+words
+                img_list+=[number]+[age]+list(words)
                 if debug:
                     for img in img_list:
                         plt.imshow(img)
