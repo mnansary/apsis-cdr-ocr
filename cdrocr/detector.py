@@ -128,40 +128,44 @@ class Locator(BaseDetector):
         args:
             img  : rgb image
         '''
-        bw,bh,d=img.shape
-        # squre img
-        img,cfg=padDetectionImage(img)
-        # for later
-        org_h,org_w,d=img.shape
-        # predict
-        data=cv2.resize(img,(self.img_dim[0],self.img_dim[1]))
-        # predict
-        data=np.expand_dims(data,axis=0)
-        data=data/255
-        pred=self.model.predict(data)[0]
-        seg=softmax(pred,axis=-1)
-        seg =np.argmax(seg,axis=-1)
-        seg=seg.astype("uint8")
-        seg=cv2.resize(seg,(org_w,org_h))
+        try:
+            bw,bh,d=img.shape
+            # squre img
+            img,cfg=padDetectionImage(img)
+            # for later
+            org_h,org_w,d=img.shape
+            # predict
+            data=cv2.resize(img,(self.img_dim[0],self.img_dim[1]))
+            # predict
+            data=np.expand_dims(data,axis=0)
+            data=data/255
+            pred=self.model.predict(data)[0]
+            seg=softmax(pred,axis=-1)
+            seg =np.argmax(seg,axis=-1)
+            seg=seg.astype("uint8")
+            seg=cv2.resize(seg,(org_w,org_h))
 
-        if cfg is not None:
-            if cfg["pad"]=="height":
-                seg=seg[:cfg["dim"],:]
-                seg=seg[:,:bw]
-                
-            else:
-                seg=seg[:,:cfg["dim"]]
-                seg=seg[:bh,:]
-        if debug:
-            plt.imshow(seg)
-            plt.show()        
-        y_min,y_max,x_min,x_max=locateData(seg,0)
-        seg=seg[:y_max,:]
-        h,w=seg.shape
-        ref=img[:h,:w]
-        ref=remove_shadows(ref)
-        ref=threshold_image(ref,blur=True)
-        ref=255-ref
-        y_min,y_max,x_min,x_max=locateData(ref,0)
-        img=img[y_min:y_max,x_min:x_max]
-        return img
+            if cfg is not None:
+                if cfg["pad"]=="height":
+                    seg=seg[:cfg["dim"],:]
+                    seg=seg[:,:bw]
+                    
+                else:
+                    seg=seg[:,:cfg["dim"]]
+                    seg=seg[:bh,:]
+            if debug:
+                plt.imshow(seg)
+                plt.show()        
+            y_min,y_max,x_min,x_max=locateData(seg,0)
+            seg=seg[:y_max,:]
+            h,w=seg.shape
+            ref=img[:h,:w]
+            ref=remove_shadows(ref)
+            ref=threshold_image(ref,blur=True)
+            ref=255-ref
+            y_min,y_max,x_min,x_max=locateData(ref,0)
+            h,w=ref.shape
+            img=img[y_min:y_max,x_min:x_max]
+            return img,h
+        except Exception as e:
+            return None
