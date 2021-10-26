@@ -122,7 +122,7 @@ class Locator(BaseDetector):
         super().__init__(model_weights, img_dim, data_channel, backbone=backbone,use_cpu=use_cpu)
         LOG_INFO("Loaded Detection Model,Locator",mcolor="green")
     
-    def crop(self,img):
+    def crop(self,img,debug=False):
         '''
         detects regions from an image
         args:
@@ -143,6 +143,7 @@ class Locator(BaseDetector):
         seg =np.argmax(seg,axis=-1)
         seg=seg.astype("uint8")
         seg=cv2.resize(seg,(org_w,org_h))
+
         if cfg is not None:
             if cfg["pad"]=="height":
                 seg=seg[:cfg["dim"],:]
@@ -151,9 +152,16 @@ class Locator(BaseDetector):
             else:
                 seg=seg[:,:cfg["dim"]]
                 seg=seg[:bh,:]
-                
+        if debug:
+            plt.imshow(seg)
+            plt.show()        
         y_min,y_max,x_min,x_max=locateData(seg,0)
         seg=seg[:y_max,:]
         h,w=seg.shape
-        img=img[:h,:w]
+        ref=img[:h,:w]
+        ref=remove_shadows(ref)
+        ref=threshold_image(ref,blur=True)
+        ref=255-ref
+        y_min,y_max,x_min,x_max=locateData(ref,0)
+        img=img[y_min:y_max,x_min:x_max]
         return img
