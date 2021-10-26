@@ -135,6 +135,7 @@ class OCR(object):
                     for img in img_list:
                         plt.imshow(img)
                         plt.show()
+                return img_list
                 
             except Exception as e:
                 print(e)
@@ -142,7 +143,7 @@ class OCR(object):
         
     
 
-    def extract(self,img,batch_size=32,debug=False,h_thresh=0.8):
+    def extract(self,img,batch_size=32,debug=False,h_thresh=0.8,proc=False):
         '''
             predict based on datatype
             args:
@@ -163,6 +164,8 @@ class OCR(object):
             number=texts[0]
             age=texts[1]
             name=" ".join(texts[2:])
+            if proc:
+                return imgs,[number,age,name]
         return [number,age,name]              
 
 
