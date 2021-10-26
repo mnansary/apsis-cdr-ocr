@@ -157,15 +157,6 @@ class Locator(BaseDetector):
                 plt.imshow(seg)
                 plt.show()        
             y_min,y_max,x_min,x_max=locateData(seg,0)
-            seg=seg[:y_max,:]
-            h,w=seg.shape
-            ref=img[:h,:w]
-            ref=remove_shadows(ref)
-            ref=threshold_image(ref,blur=True)
-            ref=255-ref
-            y_min,y_max,x_min,x_max=locateData(ref,0)
-            h,w=ref.shape
-            img=img[y_min:y_max,x_min:x_max]
-            return img,h
+            return y_max
         except Exception as e:
             return None

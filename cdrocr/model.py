@@ -10,6 +10,8 @@ from os import name
 #-------------------------
 import cv2
 import math
+
+from scipy.sparse import base
 from .utils import *
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -57,7 +59,13 @@ class OCR(object):
             LOG_INFO(f"EXECUTION EXCEPTION: {e}",mcolor="red")
 
         
-        
+    '''
+            seg=seg[:y_max,:]
+            h,w=seg.shape
+            ref=img[:h,:w]
+            #base_img[reg_h:,:]=(255,255,255)
+            #ref=cv2.resize(img,(w//2,h//2))
+    '''
 
     
     def getCrops(self,img,db_only,debug=False):
@@ -70,39 +78,46 @@ class OCR(object):
             return None
         else:
             try:
-                if debug:
-                    plt.imshow(data[0])
-                    plt.show()
-                img=data[0]
-                reg_h=data[1]
-                # resize reference
-                h,w,_=img.shape
-                #base_img[reg_h:,:]=(255,255,255)
-                
-                #ref=cv2.resize(img,(w//2,h//2))
+                reg_h=data
+                # dbnet
                 dt_boxes,_= self.dbdet.text_detector(img)
                 dt_boxes=sorted_boxes(dt_boxes)
-                # restore
-                #dt_boxes=dt_boxes*2
                 # store crops
                 crops,hs,ws=[],[],[]
                 for bno in range(len(dt_boxes)):
                     tmp_box = copy.deepcopy(dt_boxes[bno])
-                    img_crop = get_rotate_crop_image(img,tmp_box)
-                    h,w,d=img_crop.shape
-                    hs.append(h)
-                    ws.append(w)
-                    crops.append(img_crop)
+                    y_min=int(min(tmp_box[:,1]))    
+                    # filter based on region                
+                    if y_min>reg_h:
+                        img_crop = get_rotate_crop_image(img,tmp_box)
+                        h,w,d=img_crop.shape
+                        hs.append(h)
+                        ws.append(w)
+                        crops.append(img_crop)
+                        if debug:
+                            plt.imshow(img_crop)
+                            plt.show()
                 # number for reference
                 num_idx=ws.index(max(ws))
                 number=crops[num_idx]
                 hf,_,_=number.shape
+                # filter base_img
                 nbox=dt_boxes[num_idx]
                 x_max=int(max(nbox[:,0]))
                 x_min=int(min(nbox[:,0]))
                 y_max=int(max(nbox[:,1]))
                 y_min=int(min(nbox[:,1]))                    
-                #base_img[y_min:y_max,x_min:x_max]=(255,255,255)
+                base_img[y_min:,:]=(255,255,255)
+                if debug:
+                    plt.imshow(base_img)
+                    plt.show()
+                # craft input
+                ref=remove_shadows(base_img)
+                ref=threshold_image(ref,blur=True)
+                ref=255-ref
+                y_min,y_max,x_min,x_max=locateData(ref,0)
+                img=base_img[y_min:y_max,x_min:x_max]
+                
                 # collect boxes to filter
                 data=[]
                 boxes=[]
