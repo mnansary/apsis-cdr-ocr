@@ -165,7 +165,7 @@ class OCR(object):
             age=texts[1]
             name=" ".join(texts[2:])
             if proc:
-                return imgs,[number,age,name]
+                return imgs,texts
         return [number,age,name]              
 
 
