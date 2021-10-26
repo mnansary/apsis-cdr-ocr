@@ -128,6 +128,7 @@ class Locator(BaseDetector):
         args:
             img  : rgb image
         '''
+        bw,bh,d=img.shape
         # squre img
         img,cfg=padDetectionImage(img)
         # for later
@@ -140,12 +141,19 @@ class Locator(BaseDetector):
         pred=self.model.predict(data)[0]
         seg=softmax(pred,axis=-1)
         seg =np.argmax(seg,axis=-1)
+        seg=seg.astype("uint8")
         seg=cv2.resize(seg,(org_w,org_h))
         if cfg is not None:
             if cfg["pad"]=="height":
                 seg=seg[:cfg["dim"],:]
+                seg=seg[:,:bw]
+                
             else:
                 seg=seg[:,:cfg["dim"]]
+                seg=seg[:bh,:]
+                
         y_min,y_max,x_min,x_max=locateData(seg,0)
-        img=img[:y_max,:]
+        seg=seg[:y_max,:]
+        h,w=seg.shape
+        img=img[:h,:w]
         return img
