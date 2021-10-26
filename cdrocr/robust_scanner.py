@@ -231,7 +231,7 @@ class RobustScanner(object):
         masks=[]
         poss=[]
             
-        for word in tqdm(img_list):
+        for word in img_list:
             # word
             word,vmask=padWords(word,(self.img_height,self.img_width),ptype="left")
             word=np.expand_dims(word,axis=0) 
@@ -259,7 +259,7 @@ class RobustScanner(object):
         poss=[]
         h,w=img.shape[0],img.shape[1]
             
-        for box in tqdm(boxes):
+        for box in boxes:
             # crop    
             x_min,y_min,x_max,y_max=box
             word=img[y_min:y_max,x_min:x_max] 
@@ -328,7 +328,7 @@ class RobustScanner(object):
         else:
             images,masks,poss=self.process_images(image_list)
             
-        for idx in tqdm(range(0,len(images),batch_size)):
+        for idx in range(0,len(images),batch_size):
             batch={}
             # image
             batch["image"]=images[idx:idx+batch_size]
