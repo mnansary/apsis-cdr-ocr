@@ -43,8 +43,8 @@ class BaseDetector(object):
 
 
 class CRAFT(BaseDetector):
-    def __init__(self, model_weights, img_dim=(1024,1024,3), data_channel=2, backbone="densenet121"):
-        super().__init__(model_weights, img_dim, data_channel, backbone=backbone)
+    def __init__(self, model_weights, img_dim=(1024,1024,3), data_channel=2, backbone="densenet121",use_cpu=True):
+        super().__init__(model_weights, img_dim, data_channel, backbone=backbone,use_cpu=use_cpu)
         LOG_INFO("Loaded Detection Model,craft",mcolor="green")
     
     def detect(self,img,det_thresh=0.4,text_thresh=0.7,debug=False):
@@ -115,3 +115,26 @@ class CRAFT(BaseDetector):
             y_min,y_max,x_min,x_max = np.min(idx[0]), np.max(idx[0])+1, np.min(idx[1]), np.max(idx[1])+1
             boxes.append([x_min,y_min,x_max,y_max])
         return boxes
+
+class Locator(BaseDetector):
+    def __init__(self, model_weights, img_dim=(1024,1024,3), data_channel=2, backbone="densenet121",use_cpu=True):
+        super().__init__(model_weights, img_dim, data_channel, backbone=backbone,use_cpu=use_cpu)
+        LOG_INFO("Loaded Detection Model,Locator",mcolor="green")
+    
+    def detect(self,img):
+        '''
+        detects regions from an image
+        args:
+            img  : rgb image
+        '''
+        # squre img
+        img,cfg=padDetectionImage(img)
+        # for later
+        org_h,org_w,d=img.shape
+        # predict
+        data=cv2.resize(img,(self.img_dim[0],self.img_dim[1]))
+        # predict
+        data=np.expand_dims(data,axis=0)
+        data=data/255
+        pred=self.model.predict(data)[0]
+        return pred
