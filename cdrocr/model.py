@@ -3,6 +3,7 @@
 @author:MD.Nazmuddoha Ansary
 """
 from __future__ import print_function
+from os import name
 
 #-------------------------
 # imports
@@ -69,17 +70,20 @@ class OCR(object):
             return None
         else:
             try:
+                if debug:
+                    plt.imshow(data[0])
+                    plt.show()
                 img=data[0]
                 reg_h=data[1]
                 # resize reference
                 h,w,_=img.shape
                 #base_img[reg_h:,:]=(255,255,255)
                 
-                ref=cv2.resize(img,(w//2,h//2))
-                dt_boxes,_= self.dbdet.text_detector(ref)
+                #ref=cv2.resize(img,(w//2,h//2))
+                dt_boxes,_= self.dbdet.text_detector(img)
                 dt_boxes=sorted_boxes(dt_boxes)
                 # restore
-                dt_boxes=dt_boxes*2
+                #dt_boxes=dt_boxes*2
                 # store crops
                 crops,hs,ws=[],[],[]
                 for bno in range(len(dt_boxes)):
@@ -114,13 +118,23 @@ class OCR(object):
                         y_min=int(min(box[:,1]))                    
                         box=[x_min,y_min,x_max,y_max]
                         boxes.append(box)
+                
                 age=data[-2]
                 names=data[:-2]
+                boxes=boxes[:-2]
+                boxes,names = zip(*sorted(zip(boxes,names),key=lambda x: x[0][0]))
+                boxes=list(boxes)
+                names=list(names)
                 img_list=[]
                 img_list+=[number]+[age]+names
+                if debug:
+                    for img in img_list:
+                        plt.imshow(img)
+                        plt.show()
                 if db_only:
                     return img_list
             except Exception as e:
+                print(e)
                 return None
         
     
@@ -146,6 +160,6 @@ class OCR(object):
             number=texts[0]
             age=texts[1]
             name=" ".join(texts[2:])
-        return [name,age,number]              
+        return [number,age,name]              
 
 
