@@ -47,6 +47,7 @@ class OCR(object):
             LOG_INFO("Recognizer Loaded")
         except Exception as e:
             LOG_INFO(f"EXECUTION EXCEPTION: {e}",mcolor="red")
+        
         # db_net
         self.dbdet = PaddleOCR(use_angle_cls=True, lang='en',use_gpu=False) 
  
@@ -87,6 +88,8 @@ class OCR(object):
                         if debug:
                             plt.imshow(img_crop)
                             plt.show()
+                
+                
                 # number for reference
                 number=crops[-1]
                 hf,_,_=number.shape
@@ -118,6 +121,15 @@ class OCR(object):
                 # last one should be age
                 ref_boxes,words=zip(*sorted(zip(ref_boxes,words),key=lambda x: x[0][1]))
                 age=words[-1]
+
+                # name candidates
+                _,wa,_=age.shape
+                names=[]
+                for crop in crops[:-1]:
+                    hc,wc,d=crop.shape
+                    if wc>wa and hc/hf>h_thresh:
+                        names.append(crop)
+
                 # the rest are name
                 ref_boxes,words=zip(*sorted(zip(ref_boxes[:-1],words[:-1]),key=lambda x: x[0][0]))
 
@@ -135,7 +147,7 @@ class OCR(object):
                     for img in img_list:
                         plt.imshow(img)
                         plt.show()
-                return img_list
+                return img_list,names
                 
             except Exception as e:
                 print(e)
@@ -143,7 +155,7 @@ class OCR(object):
         
     
 
-    def extract(self,img,batch_size=32,debug=False,h_thresh=0.8,proc=False):
+    def extract(self,img,batch_size=32,debug=False,h_thresh=0.8):
         '''
             predict based on datatype
             args:
@@ -156,16 +168,23 @@ class OCR(object):
         # dims
         img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
         # img_list
-        imgs=self.getCrops(img,debug=debug,h_thresh=h_thresh)        
-        if type(imgs)==str:
-            return imgs
+        data=self.getCrops(img,debug=debug,h_thresh=h_thresh)        
+        if type(data)==str:
+            return data
         else:
-            texts=self.rec.recognize(None,None,image_list=imgs)
+            imgs,names=data
+            texts=self.rec.recognize(None,None,image_list=imgs,batch_size=batch_size)
             number=texts[0]
             age=texts[1]
             name=" ".join(texts[2:])
-            if proc:
-                return imgs,texts
-        return [number,age,name]              
+            
+            
+            if len(names)>0:
+                texts=self.rec.recognize(None,None,image_list=names,batch_size=batch_size)
+                sec_name=" ".join(texts)
+            else:
+                sec_name=""
+            
+        return [number,age,name,sec_name]              
 
 

@@ -45,7 +45,7 @@ def upload():
         else:
             number_ret=True
             age_ret=True
-            number,age,name=data
+            number,age,name,sec_name=data
             # check number
             for n in number:
                 rec_num=[]
@@ -55,7 +55,6 @@ def upload():
                     rec_num.append(n)
             
             if number_ret:
-                assert len(number)==len(rec_num)
                 if len(number)!=11:
                     response["number"]=f"Full Mobile Number not found:Recognized numbers:{''.join(rec_num)}"
                 else:
@@ -70,13 +69,15 @@ def upload():
                     rec_age.append(n)
             
             if age_ret:
-                assert len(age)==len(rec_age)
-                if len(number)!=2:
-                    response["age"]=f"Full Age not found:Recognized numbers:{''.join(rec_num)}"
+                if len(age)!=2:
+                    response["age"]=f"Full Age not found:Recognized Age:{''.join(rec_age)}"
                 else:
                     response["age"]=age
-            # chek name
-            response["Name"]=name
+            if sec_name.strip() and name.strip()!=sec_name.strip():
+                response["name"]=f"Multiple Name Candidates Found- 1.{name} 2.{sec_name} "
+            else:
+                response["Name"]=f"{name}"
+            
             
             
         print(response)
