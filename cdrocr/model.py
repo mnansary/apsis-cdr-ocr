@@ -122,14 +122,7 @@ class OCR(object):
                 ref_boxes,words=zip(*sorted(zip(ref_boxes,words),key=lambda x: x[0][1]))
                 age=words[-1]
 
-                # name candidates
-                _,wa,_=age.shape
-                names=[]
-                for crop in crops[:-1]:
-                    hc,wc,d=crop.shape
-                    if wc>wa and hc/hf>h_thresh:
-                        names.append(crop)
-
+                
                 # the rest are name
                 ref_boxes,words=zip(*sorted(zip(ref_boxes[:-1],words[:-1]),key=lambda x: x[0][0]))
 
@@ -147,7 +140,7 @@ class OCR(object):
                     for img in img_list:
                         plt.imshow(img)
                         plt.show()
-                return img_list,names
+                return img_list
                 
             except Exception as e:
                 print(e)
@@ -172,19 +165,14 @@ class OCR(object):
         if type(data)==str:
             return data
         else:
-            imgs,names=data
+            imgs=data
             texts=self.rec.recognize(None,None,image_list=imgs,batch_size=batch_size)
             number=texts[0]
             age=texts[1]
             name=" ".join(texts[2:])
             
             
-            if len(names)>0:
-                texts=self.rec.recognize(None,None,image_list=names,batch_size=batch_size)
-                sec_name=" ".join(texts)
-            else:
-                sec_name=""
             
-        return [number,age,name,sec_name]              
+        return [number,age,name]              
 
 

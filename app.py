@@ -45,7 +45,7 @@ def upload():
         else:
             number_ret=True
             age_ret=True
-            number,age,name,sec_name=data
+            number,age,name=data
             # check number
             for n in number:
                 rec_num=[]
@@ -73,16 +73,13 @@ def upload():
                     response["age"]=f"Full Age not found:Recognized Age:{''.join(rec_age)}"
                 else:
                     response["age"]=age
-            if sec_name.strip() and name.strip()!=sec_name.strip():
-                response["name"]=f"Multiple Name Candidates Found- 1.{name} 2.{sec_name} "
-            else:
-                response["Name"]=f"{name}"
+            response["Name"]=f"{name}"
             
             
             
         print(response)
         return jsonify(response)
-    return None
+    return jsonify({"error":"upload failed"})
 
 
 if __name__ == '__main__':
