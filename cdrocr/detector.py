@@ -35,10 +35,6 @@ class BaseDetector(object):
                 self.model=sm.Unet(self.backbone,input_shape=self.img_dim, classes=self.data_channel,encoder_weights=None)
                 self.model.load_weights(model_weights)
         else:
-            gpus = tf.config.experimental.list_physical_devices('GPU')
-            print(gpus)
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
             self.model=sm.Unet(self.backbone,input_shape=self.img_dim, classes=self.data_channel,encoder_weights=None)
             self.model.load_weights(model_weights)
 
@@ -82,6 +78,7 @@ class CRAFT(BaseDetector):
             plt.imshow(labels)
             plt.show()
         boxes = []
+        ref_boxes=[]
         for component_id in range(1, n_components):
             # Filter by size
             size = stats[component_id, cv2.CC_STAT_AREA]
@@ -112,10 +109,60 @@ class CRAFT(BaseDetector):
                 cv2.getStructuringElement(cv2.MORPH_RECT, (1 + niter, 1 + niter)))
             # idx 
             segmap=cv2.resize(segmap,(org_w,org_h))
+            
+
+            # make box
+            np_temp = np.roll(np.array(np.where(segmap != 0)), 1, axis=0)
+            np_contours = np_temp.transpose().reshape(-1, 2)
+            rectangle = cv2.minAreaRect(np_contours)
+            box = cv2.boxPoints(rectangle)
+
+            # boundary check due to minAreaRect may have out of range values 
+            # (see https://docs.opencv.org/3.4/d3/dc0/group__imgproc__shape.html#ga3d476a3417130ae5154aea421ca7ead9)
+            for p in box:
+                if p[0] < 0:
+                    p[0] = 0
+                if p[1] < 0:
+                    p[1] = 0
+                if p[0] >= img_w:
+                    p[0] = img_w
+                if p[1] >= img_h:
+                    p[1] = img_h
+
+            # align diamond-shape
+            w, h = np.linalg.norm(box[0] - box[1]), np.linalg.norm(box[1] - box[2])
+            box_ratio = max(w, h) / (min(w, h) + 1e-5)
+            if abs(1 - box_ratio) <= 0.1:
+                l, r = min(np_contours[:, 0]), max(np_contours[:, 0])
+                t, b = min(np_contours[:, 1]), max(np_contours[:, 1])
+                box = np.array([[l, t], [r, t], [r, b], [l, b]], dtype=np.float32)
+
+            # make clock-wise order
+            startidx = box.sum(axis=1).argmin()
+            box = np.roll(box, 4 - startidx, 0)
+            box = np.array(box)
+
             idx = np.where(segmap>0)            
             y_min,y_max,x_min,x_max = np.min(idx[0]), np.max(idx[0])+1, np.min(idx[1]), np.max(idx[1])+1
-            boxes.append([x_min,y_min,x_max,y_max])
-        return boxes
+            ref_boxes.append([x_min,y_min,x_max,y_max])
+            boxes.append(box)
+        crops=[]
+        for box in boxes:
+            # size filter for small instance
+            w, h = (
+                int(np.linalg.norm(box[0] - box[1]) + 1),
+                int(np.linalg.norm(box[1] - box[2]) + 1),
+            )
+            # if w < 10 or h < 10:
+            #     continue
+
+            # warp image
+            tar = np.float32([[0, 0], [w, 0], [w, h], [0, h]])
+            M = cv2.getPerspectiveTransform(box, tar)
+            crop = cv2.warpPerspective(img, M, (w, h), flags=cv2.INTER_NEAREST)
+            crops.append(crop)
+        ref_boxes,crops=zip(*sorted(zip(ref_boxes,crops),key=lambda x: x[0][1]))
+        return list(ref_boxes),list(crops)
 
 class Locator(BaseDetector):
     def __init__(self, model_weights, img_dim=(1024,1024,3), data_channel=2, backbone="densenet121",use_cpu=True):

@@ -70,7 +70,8 @@ class RobustScanner(object):
                       nb_channels=3,
                       pos_max=40,
                       use_feat_reduce=True,
-                      vocab=None):
+                      vocab=None,
+                      use_cpu=True):
         
         #-------------
         # config-globals
@@ -108,8 +109,24 @@ class RobustScanner(object):
         LOG_INFO(f"Pad Value:{self.pad_value}")
         LOG_INFO(f"Start End:{self.start_end}")
 
-        strategy = tf.distribute.OneDeviceStrategy(device="/CPU:0")
-        with strategy.scope():
+        if use_cpu:
+            strategy = tf.distribute.OneDeviceStrategy(device="/CPU:0")
+            with strategy.scope():
+                self.encm    =  self.encoder()
+                self.encm.load_weights(os.path.join(model_dir,"rec","enc.h5"))      
+                LOG_INFO("encm loaded")
+                self.seqm    =  self.seq_decoder()
+                self.seqm.load_weights(os.path.join(model_dir,"rec","seq.h5"))      
+                LOG_INFO("seqm loaded")
+                
+                self.posm    =  self.pos_decoder()
+                self.posm.load_weights(os.path.join(model_dir,"rec","pos.h5"))      
+                LOG_INFO("posm loaded")
+                
+                self.fusm    =  self.fusion()
+                self.fusm.load_weights(os.path.join(model_dir,"rec","fuse.h5"))      
+                LOG_INFO("fusm loaded")
+        else:
             self.encm    =  self.encoder()
             self.encm.load_weights(os.path.join(model_dir,"rec","enc.h5"))      
             LOG_INFO("encm loaded")
@@ -124,7 +141,7 @@ class RobustScanner(object):
             self.fusm    =  self.fusion()
             self.fusm.load_weights(os.path.join(model_dir,"rec","fuse.h5"))      
             LOG_INFO("fusm loaded")
-        
+
     def encoder(self):
         '''
         creates the encoder part:
