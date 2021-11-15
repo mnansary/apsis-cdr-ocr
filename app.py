@@ -18,8 +18,7 @@ from cdrocr.model import OCR
 app = Flask(__name__)
 
 ocr=OCR("models/")
-EN_NUMS=["0","1","2","3","4","5","6","7","8","9"]
-BN_NUMS=['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯']
+
 
 @app.route('/', methods=['GET'])
 def index():
@@ -39,46 +38,7 @@ def upload():
         file_path = os.path.join(basepath,"tests",'uploads', secure_filename(f.filename))
         f.save(file_path)
         data=ocr.extract(file_path)
-        response={}
-        if type(data)==str:
-            response["error"]=data
-        else:
-            number_ret=True
-            age_ret=True
-            number,age,name=data
-            # check number
-            for n in number:
-                rec_num=[]
-                if n not in EN_NUMS+BN_NUMS:
-                    number_ret=False
-                else:
-                    rec_num.append(n)
-            
-            if number_ret:
-                if len(number)!=11:
-                    response["number"]=f"Full Mobile Number not found:Recognized numbers:{''.join(rec_num)}"
-                else:
-                    response["number"]=number
-
-            # check age
-            for n in age:
-                rec_age=[]
-                if n not in EN_NUMS+BN_NUMS:
-                    age_ret=False
-                else:
-                    rec_age.append(n)
-            
-            if age_ret:
-                if len(age)!=2:
-                    response["age"]=f"Full Age not found:Recognized Age:{''.join(rec_age)}"
-                else:
-                    response["age"]=age
-            response["Name"]=f"{name}"
-            
-            
-            
-        print(response)
-        return jsonify(response)
+        return jsonify(data)
     return jsonify({"error":"upload failed"})
 
 

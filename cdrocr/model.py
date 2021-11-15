@@ -61,59 +61,63 @@ class OCR(object):
                 img                 :   image to infer on
                 batch_size          :   batch size for inference
         '''
-        nums=["0","1","2","3","4","5","6","7","8","9","০","১","২","৩","৪","৫","৬","৭","৮","৯"]
-        # process if path is provided
-        if type(img)==str:
-            img=cv2.imread(img)
-        # dims
-        img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
-        # detect
-        ref_boxes,crops=self.det.detect(img,debug=debug)
-        if len(ref_boxes)<1:
-            return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}
-        else:
-            verdict=''
-            ws=[]
-            hs=[]
-            for crop in crops:
-                h,w,_=crop.shape
-                ws.append(w)
-                hs.append(h)
-                plt.imshow(crop)
-                plt.show()
-            num_idx=np.argmax(ws)
+        try:
             
-            mobile=crops[num_idx]
-            age=crops[num_idx-1]
-            # name
-            rest=crops[:num_idx-1]
-            ref_boxes=ref_boxes[:len(rest)]
-            ref_boxes,rest=zip(*sorted(zip(ref_boxes,rest),key=lambda x: x[0][0]))
-            
+            nums=["0","1","2","3","4","5","6","7","8","9","০","১","২","৩","৪","৫","৬","৭","৮","৯"]
+            # process if path is provided
+            if type(img)==str:
+                img=cv2.imread(img)
+            # dims
+            img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+            # detect
+            ref_boxes,crops=self.det.detect(img,debug=debug)
+            if len(ref_boxes)<1:
+                return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}
+            else:
+                verdict=''
+                ws=[]
+                hs=[]
+                for crop in crops:
+                    h,w,_=crop.shape
+                    ws.append(w)
+                    hs.append(h)
+                    if debug:
+                        plt.imshow(crop)
+                        plt.show()
+                num_idx=np.argmax(ws)
                 
-            crops=list(rest)+[age]+[mobile]
-            texts=self.rec.recognize(None,None,image_list=crops,batch_size=batch_size)
-            # data
-            number=texts[-1]
-            if number[0] not in nums:
-                number=''
-                verdict+="mobile number not found:low resolution/ irregular image\n"
+                mobile=crops[num_idx]
+                age=crops[num_idx-1]
+                # name
+                rest=crops[:num_idx-1]
+                ref_boxes=ref_boxes[:len(rest)]
+                ref_boxes,rest=zip(*sorted(zip(ref_boxes,rest),key=lambda x: x[0][0]))
+                
+                    
+                crops=list(rest)+[age]+[mobile]
+                texts=self.rec.recognize(None,None,image_list=crops,batch_size=batch_size)
+                # data
+                number=texts[-1]
+                if number[0] not in nums:
+                    number=''
+                    verdict+="mobile number not found:low resolution/ irregular image\n"
 
-            if texts[-2][0] in nums:
-                age=texts[-2]
-            else:
-                age=''
-                verdict+="age not found:low resolution/ irregular image\n"
+                if texts[-2][0] in nums:
+                    age=texts[-2]
+                else:
+                    age=''
+                    verdict+="age not found:low resolution/ irregular image\n"
 
-            if len(texts)<3:
-                name=''
-                verdict+="name not found:low resolution/ irregular image\n"
-            else:
-                name=" ".join(list(texts)[:-2])
-            
-            if len(name)==0:
-                verdict+="name not found:low resolution/ irregular image\n"
+                if len(texts)<3:
+                    name=''
+                    verdict+="name not found:low resolution/ irregular image\n"
+                else:
+                    name=" ".join(list(texts)[:-2])
+                
+                if len(name)==0:
+                    verdict+="name not found:low resolution/ irregular image\n"
 
-            return {"name":name,"age":age,"number":number,"verdict":verdict}
-       
+                return {"name":name,"age":age,"number":number,"verdict":verdict}
+        except Exception as e:
+            return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}    
 
