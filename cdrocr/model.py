@@ -54,7 +54,7 @@ class OCR(object):
 
             
     
-    def extract(self,img,batch_size=32,debug=False):
+    def extract(self,img,batch_size=32,debug=False,ret_deg=False):
         '''
             predict based on datatype
             args:
@@ -71,9 +71,30 @@ class OCR(object):
             img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
             # detect
             ref_boxes,crops=self.det.detect(img,debug=debug)
+            if debug:
+                print(len(ref_boxes),len(crops))
+                for crop in crops:
+                    plt.imshow(crop)
+                    plt.show()
+
             if len(ref_boxes)<1:
                 return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}
             else:
+                if ret_deg:
+                    texts=self.rec.recognize(None,None,image_list=crops,batch_size=batch_size)
+                    print(texts) 
+                if len(crops)>0 and len(crops)<2:
+                    name=''
+                    age=''
+                    number=''
+                    texts=self.rec.recognize(None,None,image_list=crops,batch_size=batch_size)
+                    for text in texts:
+                        if len(text)==2 and text[0] in nums and text[1] in nums:
+                            age=text
+                        if len(text)==11 and text[0] in nums and text[-1] in nums:
+                            number=text
+
+                    return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}
                 verdict=''
                 ws=[]
                 hs=[]
@@ -87,6 +108,10 @@ class OCR(object):
                 num_idx=np.argmax(ws)
                 
                 mobile=crops[num_idx]
+                if len(crops)==1:
+                    texts=self.rec.recognize(None,None,image_list=crops,batch_size=batch_size)
+                    return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}
+
                 age=crops[num_idx-1]
                 # name
                 rest=crops[:num_idx-1]
