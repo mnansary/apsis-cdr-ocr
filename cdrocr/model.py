@@ -83,7 +83,8 @@ class OCR(object):
                 if ret_deg:
                     texts=self.rec.recognize(None,None,image_list=crops,batch_size=batch_size)
                     print(texts) 
-                if len(crops)>0 and len(crops)<2:
+
+                if len(crops)>0 and len(crops)<=2:
                     name=''
                     age=''
                     number=''
@@ -93,56 +94,57 @@ class OCR(object):
                             age=text
                         if len(text)==11 and text[0] in nums and text[-1] in nums:
                             number=text
+                        else:
+                            name=text
 
-                    return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}
-                verdict=''
-                ws=[]
-                hs=[]
-                for crop in crops:
-                    h,w,_=crop.shape
-                    ws.append(w)
-                    hs.append(h)
-                    if debug:
-                        plt.imshow(crop)
-                        plt.show()
-                num_idx=np.argmax(ws)
+                    return {"name":name,"age":age,"number":number,"verdict":"low resolution image: could not detect properly.probable results"}
                 
-                mobile=crops[num_idx]
-                if len(crops)==1:
-                    texts=self.rec.recognize(None,None,image_list=crops,batch_size=batch_size)
-                    return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}
+                if len(crops)>2:
+                    verdict=''
+                    ws=[]
+                    hs=[]
 
-                age=crops[num_idx-1]
-                # name
-                rest=crops[:num_idx-1]
-                ref_boxes=ref_boxes[:len(rest)]
-                ref_boxes,rest=zip(*sorted(zip(ref_boxes,rest),key=lambda x: x[0][0]))
-                
+                    for crop in crops:
+                        h,w,_=crop.shape
+                        ws.append(w)
+                        hs.append(h)
+                        if debug:
+                            plt.imshow(crop)
+                            plt.show()
+                    num_idx=np.argmax(ws)
                     
-                crops=list(rest)+[age]+[mobile]
-                texts=self.rec.recognize(None,None,image_list=crops,batch_size=batch_size)
-                # data
-                number=texts[-1]
-                if number[0] not in nums:
-                    number=''
-                    verdict+="mobile number not found:low resolution/ irregular image\n"
+                    mobile=crops[num_idx]
 
-                if texts[-2][0] in nums:
-                    age=texts[-2]
-                else:
-                    age=''
-                    verdict+="age not found:low resolution/ irregular image\n"
+                    age=crops[num_idx-1]
+                    # name
+                    rest=crops[:num_idx-1]
+                    ref_boxes=ref_boxes[:len(rest)]
+                    ref_boxes,rest=zip(*sorted(zip(ref_boxes,rest),key=lambda x: x[0][0]))
+                    
+                        
+                    crops=list(rest)+[age]+[mobile]
+                    texts=self.rec.recognize(None,None,image_list=crops,batch_size=batch_size)
+                    # data
+                    number=texts[-1]
+                    if number[0] not in nums:
+                        verdict+="mobile number not found properly:low resolution/ irregular image\n"
 
-                if len(texts)<3:
-                    name=''
-                    verdict+="name not found:low resolution/ irregular image\n"
-                else:
-                    name=" ".join(list(texts)[:-2])
-                
-                if len(name)==0:
-                    verdict+="name not found:low resolution/ irregular image\n"
+                    if texts[-2][0] in nums:
+                        age=texts[-2]
+                    else:
+                        age=''
+                        verdict+="age not found properly:low resolution/ irregular image\n"
 
-                return {"name":name,"age":age,"number":number,"verdict":verdict}
+                    if len(texts)<3:
+                        name=''
+                        verdict+="name not found:low resolution/ irregular image\n"
+                    else:
+                        name=" ".join(list(texts)[:-2])
+                    
+                    if len(name)==0:
+                        verdict+="name not found:low resolution/ irregular image\n"
+
+                    return {"name":name,"age":age,"number":number,"verdict":verdict}
         except Exception as e:
             return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}    
 
