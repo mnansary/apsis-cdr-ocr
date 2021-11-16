@@ -108,6 +108,7 @@ class CRAFT(BaseDetector):
             
         crops=[]
         for box in ref_boxes:
+            x_min,y_min,x_max,y_max=box
             crops.append(img[y_min:y_max,x_min:x_max])
         ref_boxes,crops=zip(*sorted(zip(ref_boxes,crops),key=lambda x: x[0][1]))
         return list(ref_boxes),list(crops)
