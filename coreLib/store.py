@@ -72,9 +72,11 @@ def createRecords(data,save_path,tf_size=10240):
         for col in eval_cols:
             data[col]=data[col].progress_apply(lambda x: literal_eval(x))
     
+    data.reset_index(drop=True,inplace=True)
     LOG_INFO(f"Creating TFRECORDS No folds:{save_path}")
     for idx in tqdm(range(0,len(data),tf_size)):
-        df        =   data.iloc[idx:idx+tf_size]  
+        df        =   data.iloc[idx:idx+tf_size]
+        df.reset_index(drop=True,inplace=True)  
         rnum      =   idx//tf_size
         toTfrecord(df,rnum,save_path)
 

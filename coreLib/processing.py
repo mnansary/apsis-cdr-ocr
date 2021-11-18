@@ -174,8 +174,10 @@ def processLabels(df,vocab,max_len):
     GP=GraphemeParser(language=None)
     # process text
     ## components
+    df.word=df.word.progress_apply(lambda x:str(x))
     df["components"]=df.word.progress_apply(lambda x:GP.process(x))
     df.dropna(inplace=True)
+    df.reset_index(drop=True,inplace=True)
     df["eg_label"]=df.components.progress_apply(lambda x:encode_label(x,vocab))
     ### grapheme
     start_end_value=len(vocab)+1
@@ -195,6 +197,7 @@ def processData(csv,vocab,max_len,img_dim):
             num_folds   :   creating folds of the data
     '''
     df=pd.read_csv(csv)
+    df.reset_index(drop=True,inplace=True)
     # images
     df=processImages(df,img_dim)
     # labels
@@ -203,6 +206,7 @@ def processData(csv,vocab,max_len,img_dim):
     cols=["filepath","mask","label"]
     df=df[cols]
     df.dropna(inplace=True)
+    df.reset_index(drop=True,inplace=True)
     df.to_csv(csv,index=False)
     LOG_INFO(f"Not Found:{not_found}")
     return df
