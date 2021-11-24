@@ -105,7 +105,7 @@ class OCR(object):
                     return {"name":name,"age":age,"number":number,"verdict":"low resolution image: could not detect properly/missing data in original image.probable results"}
                 
                 elif len(ref_boxes)==3:
-                    text_boxes=self.craft.detect(img,debug=debug)
+                    text_boxes,text_crops=self.craft.detect(img,debug=debug)
                     
                     crops=[]
                     for box in ref_boxes:
@@ -125,22 +125,19 @@ class OCR(object):
 
                     # name
                     name_boxes=[]
-                    for tbox in text_boxes:
+                    name_crops=[]
+                    for tbox,ncrop in zip(text_boxes,text_crops):
                         idx=localize_box(tbox,ref_boxes)
                         if idx==0:
                             name_boxes.append(tbox)
-                    name_boxes=sorted(name_boxes,key=lambda x: x[0])    
+                            name_crops.append(ncrop)
+                    name_boxes,name_crops=zip(*sorted(zip(name_boxes,name_crops),key=lambda x: x[0][0]))            
 
-                    crops=[]
-                    for box in name_boxes:
-                        x1,y1,x2,y2=box
-                        crops.append(img[y1:y2,x1:x2])
-                        if debug:
-                            plt.imshow(img[y1:y2,x1:x2])
+                    if debug:
+                        for c in name_crops:
+                            plt.imshow(c)
                             plt.show()
-                    
-
-                    name=self.rec.recognize(None,None,image_list=crops,batch_size=batch_size)
+                    name=self.rec.recognize(None,None,image_list=list(name_crops),batch_size=batch_size)
                     name=" ".join(name)
                     
                     return {"name":name,"age":age,"number":mobile,"verdict":verdict}

@@ -70,6 +70,7 @@ class CRAFT(BaseDetector):
             plt.show()
         
         text_boxes=[]
+        boxes=[]
         for component_id in range(1, n_components):
             # Filter by size
             size = stats[component_id, cv2.CC_STAT_AREA]
@@ -103,5 +104,52 @@ class CRAFT(BaseDetector):
             idx = np.where(segmap>0)            
             y_min,y_max,x_min,x_max = np.min(idx[0]), np.max(idx[0])+1, np.min(idx[1]), np.max(idx[1])+1
             text_boxes.append([x_min,y_min,x_max,y_max])
-            
-        return text_boxes
+
+            # make box
+            np_temp = np.roll(np.array(np.where(segmap != 0)), 1, axis=0)
+            np_contours = np_temp.transpose().reshape(-1, 2)
+            rectangle = cv2.minAreaRect(np_contours)
+            box = cv2.boxPoints(rectangle)
+
+            # boundary check due to minAreaRect may have out of range values 
+            # (see https://docs.opencv.org/3.4/d3/dc0/group__imgproc__shape.html#ga3d476a3417130ae5154aea421ca7ead9)
+            for p in box:
+                if p[0] < 0:
+                    p[0] = 0
+                if p[1] < 0:
+                    p[1] = 0
+                if p[0] >= img_w:
+                    p[0] = img_w
+                if p[1] >= img_h:
+                    p[1] = img_h
+
+            # align diamond-shape
+            w, h = np.linalg.norm(box[0] - box[1]), np.linalg.norm(box[1] - box[2])
+            box_ratio = max(w, h) / (min(w, h) + 1e-5)
+            if abs(1 - box_ratio) <= 0.1:
+                l, r = min(np_contours[:, 0]), max(np_contours[:, 0])
+                t, b = min(np_contours[:, 1]), max(np_contours[:, 1])
+                box = np.array([[l, t], [r, t], [r, b], [l, b]], dtype=np.float32)
+
+            # make clock-wise order
+            startidx = box.sum(axis=1).argmin()
+            box = np.roll(box, 4 - startidx, 0)
+            box = np.array(box)
+            boxes.append(box)
+
+        crops=[]
+        for box in boxes:
+            # size filter for small instance
+            w, h = (
+                int(np.linalg.norm(box[0] - box[1]) + 1),
+                int(np.linalg.norm(box[1] - box[2]) + 1),
+            )
+            # if w < 10 or h < 10:
+            #     continue
+
+            # warp image
+            tar = np.float32([[0, 0], [w, 0], [w, h], [0, h]])
+            M = cv2.getPerspectiveTransform(box, tar)
+            crop = cv2.warpPerspective(img, M, (w, h), flags=cv2.INTER_NEAREST)
+            crops.append(crop)    
+        return text_boxes,crops
