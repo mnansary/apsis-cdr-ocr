@@ -165,13 +165,7 @@ class YOLO(object):
         self.graph_input=graph_input
         self.model = ort.InferenceSession(model_weights, providers=providers)
     
-    def process(self,img,debug=False):
-        if type(img)==str:
-            img=cv2.imread(img)
-        img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
-        img,_=padDetectionImage(img)
-        h,w,_=img.shape
-        data=cv2.resize(img,self.img_dim)
+    def process(self,data):
         data=np.transpose(data,(2,0,1))
         data=np.expand_dims(data,axis=0)
         data=data/255
@@ -185,20 +179,7 @@ class YOLO(object):
             boxes.append(box)
         
         boxes=sorted(boxes,key=lambda x: x[1])
-        
-        crops=[]
-        for box in boxes:
-            x1,y1,x2,y2=box
-            x1=int(w*(x1/self.img_dim[1]))
-            x2=int(w*(x2/self.img_dim[1]))
-            y1=int(w*(y1/self.img_dim[0]))
-            y2=int(w*(y2/self.img_dim[0]))
-            crops.append(img[y1:y2,x1:x2])
-        if debug:
-            for crop in crops:
-                plt.imshow(crop)
-                plt.show()
-        return boxes,crops
+        return boxes
             
             
 

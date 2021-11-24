@@ -45,10 +45,6 @@ class CRAFT(BaseDetector):
         args:
             img  : rgb image
         '''
-        if type(img)==str:
-            img=cv2.imread(img)
-        img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
-        img,_=padDetectionImage(img)
         org_h,org_w,_=img.shape
         data=cv2.resize(img,(self.img_dim[1],self.img_dim[0]))
         # predict
@@ -73,7 +69,7 @@ class CRAFT(BaseDetector):
             plt.imshow(labels)
             plt.show()
         
-        ref_boxes=[]
+        text_boxes=[]
         for component_id in range(1, n_components):
             # Filter by size
             size = stats[component_id, cv2.CC_STAT_AREA]
@@ -106,11 +102,6 @@ class CRAFT(BaseDetector):
             segmap=cv2.resize(segmap,(org_w,org_h))
             idx = np.where(segmap>0)            
             y_min,y_max,x_min,x_max = np.min(idx[0]), np.max(idx[0])+1, np.min(idx[1]), np.max(idx[1])+1
-            ref_boxes.append([x_min,y_min,x_max,y_max])
+            text_boxes.append([x_min,y_min,x_max,y_max])
             
-        crops=[]
-        for box in ref_boxes:
-            x_min,y_min,x_max,y_max=box
-            crops.append(img[y_min:y_max,x_min:x_max])
-        ref_boxes,crops=zip(*sorted(zip(ref_boxes,crops),key=lambda x: x[0][1]))
-        return list(ref_boxes),list(crops)
+        return text_boxes
