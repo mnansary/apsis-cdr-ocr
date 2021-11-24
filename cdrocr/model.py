@@ -74,12 +74,17 @@ class OCR(object):
             if type(img)==str:
                 img=cv2.imread(img)
             img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
-            h,w,_=img.shape
             img,_=padDetectionImage(img)
-            img=cv2.resize(img,img_dim)
-        
+            
             # yolo
             ref_boxes=self.yolo.process(img)
+            if debug:
+                for box in ref_boxes:
+                    x1,y1,x2,y2=box
+                    plt.imshow(img[y1:y2,x1:x2])
+                    plt.show()
+           
+                
             
             if len(ref_boxes)<1:
                 return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}

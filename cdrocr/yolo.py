@@ -166,6 +166,8 @@ class YOLO(object):
         self.model = ort.InferenceSession(model_weights, providers=providers)
     
     def process(self,data):
+        h,w,_=data.shape
+        data=cv2.resize(data,self.img_dim)
         data=np.transpose(data,(2,0,1))
         data=np.expand_dims(data,axis=0)
         data=data/255
@@ -175,7 +177,11 @@ class YOLO(object):
         boxes=[]
         for box in bbox:
             x1,y1,x2,y2,_,_=box
-            box=[int(x1),int(y1),int(x2),int(y2)]
+            x1=int(w*(x1/self.img_dim[1]))
+            y1=int(h*(y1/self.img_dim[0]))
+            x2=int(w*(x2/self.img_dim[1]))
+            y2=int(h*(y2/self.img_dim[0]))
+            box=[x1,y1,x2,y2]
             boxes.append(box)
         
         boxes=sorted(boxes,key=lambda x: x[1])
