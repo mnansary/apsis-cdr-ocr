@@ -14,7 +14,7 @@ import cv2
 from flask import Flask, redirect, url_for, request, render_template,jsonify
 from werkzeug.utils import secure_filename
 # models
-from cdrocr.model2 import OCR
+from cdrocr.model import OCR
 # Define a flask app
 app = Flask(__name__)
 

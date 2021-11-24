@@ -65,6 +65,7 @@ class DotAttention(tf.keras.layers.Layer):
 
 class RobustScanner(object):
     def __init__(self,model_dir,
+                      iden,
                       img_height=64,
                       img_width=512,
                       nb_channels=3,
@@ -77,7 +78,7 @@ class RobustScanner(object):
         # config-globals
         #-------------
         if vocab is None:
-            with open(os.path.join(model_dir,"rec","vocab.json")) as f:
+            with open(os.path.join(model_dir,iden,"vocab.json")) as f:
                 vocab = json.load(f)["vocab"]    
         self.vocab=vocab
 
@@ -109,39 +110,23 @@ class RobustScanner(object):
         LOG_INFO(f"Pad Value:{self.pad_value}")
         LOG_INFO(f"Start End:{self.start_end}")
 
-        if use_cpu:
-            strategy = tf.distribute.OneDeviceStrategy(device="/CPU:0")
-            with strategy.scope():
-                self.encm    =  self.encoder()
-                self.encm.load_weights(os.path.join(model_dir,"rec","enc.h5"))      
-                LOG_INFO("encm loaded")
-                self.seqm    =  self.seq_decoder()
-                self.seqm.load_weights(os.path.join(model_dir,"rec","seq.h5"))      
-                LOG_INFO("seqm loaded")
-                
-                self.posm    =  self.pos_decoder()
-                self.posm.load_weights(os.path.join(model_dir,"rec","pos.h5"))      
-                LOG_INFO("posm loaded")
-                
-                self.fusm    =  self.fusion()
-                self.fusm.load_weights(os.path.join(model_dir,"rec","fuse.h5"))      
-                LOG_INFO("fusm loaded")
-        else:
+        strategy = tf.distribute.OneDeviceStrategy(device="/CPU:0")
+        with strategy.scope():
             self.encm    =  self.encoder()
-            self.encm.load_weights(os.path.join(model_dir,"rec","enc.h5"))      
+            self.encm.load_weights(os.path.join(model_dir,iden,"enc.h5"))      
             LOG_INFO("encm loaded")
             self.seqm    =  self.seq_decoder()
-            self.seqm.load_weights(os.path.join(model_dir,"rec","seq.h5"))      
+            self.seqm.load_weights(os.path.join(model_dir,iden,"seq.h5"))      
             LOG_INFO("seqm loaded")
             
             self.posm    =  self.pos_decoder()
-            self.posm.load_weights(os.path.join(model_dir,"rec","pos.h5"))      
+            self.posm.load_weights(os.path.join(model_dir,iden,"pos.h5"))      
             LOG_INFO("posm loaded")
             
             self.fusm    =  self.fusion()
-            self.fusm.load_weights(os.path.join(model_dir,"rec","fuse.h5"))      
+            self.fusm.load_weights(os.path.join(model_dir,iden,"fuse.h5"))      
             LOG_INFO("fusm loaded")
-
+        
     def encoder(self):
         '''
         creates the encoder part:
