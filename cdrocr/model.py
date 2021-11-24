@@ -16,6 +16,7 @@ from .utils import *
 import pandas as pd
 import matplotlib.pyplot as plt
 from .yolo import YOLO
+from .detector import CRAFT
 from .robust_scanner import RobustScanner
 import copy
 #-------------------------
@@ -39,20 +40,24 @@ class OCR(object):
             
         # detector weight loading and initialization
         try:
-            craft_weights=os.path.join(model_dir,'yolo',"yolo.onnx")
-            self.det=YOLO(craft_weights)        
+            yolo_weights=os.path.join(model_dir,'yolo',"yolo.onnx")
+            self.det=YOLO(yolo_weights)
+            LOG_INFO("YOLO Loaded")
+            craft_weights=os.path.join(model_dir,'det',"craft.h5")
+            self.craft=CRAFT(craft_weights)
+                    
             LOG_INFO("Detector Loaded")    
         except Exception as e:
             LOG_INFO(f"EXECUTION EXCEPTION: {e}",mcolor="red")
 
         
-        # recognizer weight loading and initialization
-        try:
-            self.rec=RobustScanner(model_dir,"base")
-            self.numrec=RobustScanner(model_dir,"num",pos_max=15)
-            LOG_INFO("Recognizer Loaded")
-        except Exception as e:
-            LOG_INFO(f"EXECUTION EXCEPTION: {e}",mcolor="red")
+        # # recognizer weight loading and initialization
+        # try:
+        #     self.rec=RobustScanner(model_dir,"base")
+        #     self.numrec=RobustScanner(model_dir,"num",pos_max=15)
+        #     LOG_INFO("Recognizer Loaded")
+        # except Exception as e:
+        #     LOG_INFO(f"EXECUTION EXCEPTION: {e}",mcolor="red")
         
         
             
@@ -68,13 +73,8 @@ class OCR(object):
             
             nums=["0","1","2","3","4","5","6","7","8","9","০","১","২","৩","৪","৫","৬","৭","৮","৯"]
             # detect
-            crops=self.det.process(img,debug=debug)
-            if debug:
-                print(len(crops))
-                for crop in crops:
-                    plt.imshow(crop)
-                    plt.show()
-
+            boxes,crops=self.det.process(img,debug=debug)
+            
             if len(crops)<1:
                 return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}
             else:
@@ -83,30 +83,34 @@ class OCR(object):
                     name=''
                     age=''
                     number=''
-                    texts=self.rec.recognize(None,None,image_list=crops,batch_size=batch_size)
-                    for text in texts:
-                        if len(text)==2 and text[0] in nums and text[1] in nums:
-                            age=text
-                        if len(text)>2 and text[0] in nums and text[-1] in nums:
-                            number=text
-                        else:
-                            name=text
+                    # texts=self.rec.recognize(None,None,image_list=crops,batch_size=batch_size)
+                    # for text in texts:
+                    #     if len(text)==2 and text[0] in nums and text[1] in nums:
+                    #         age=text
+                    #     if len(text)>2 and text[0] in nums and text[-1] in nums:
+                    #         number=text
+                    #     else:
+                    #         name=text
 
                     return {"name":name,"age":age,"number":number,"verdict":"low resolution image: could not detect properly/missing data in original image.probable results"}
                 
                 elif len(crops)==3:
                     verdict=''
-                    name=crops[0]
+                    
                     age=crops[1]
                     mobile=crops[2]
+                    # # age and num
+                    # texts=self.numrec.recognize(None,None,image_list=[age,mobile],batch_size=batch_size,infer_len=12)
+                    # age=texts[0]
+                    # mobile=texts[1]
+
 
                     # name
-                    name=self.rec.recognize(None,None,image_list=[name],batch_size=batch_size)
-                    name="".join(name)
-                    # age and num
-                    texts=self.numrec.recognize(None,None,image_list=[age,mobile],batch_size=batch_size,infer_len=12)
-                    age=texts[0]
-                    mobile=texts[1]
+                    ref_boxes,ref_crops=self.craft.detect(img,debug=debug)
+                    
+                    # name=self.rec.recognize(None,None,image_list=[name],batch_size=batch_size)
+                    # name="".join(name)
+                    
                     return {"name":name,"age":age,"number":mobile,"verdict":verdict}
         except Exception as e:
             return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}    

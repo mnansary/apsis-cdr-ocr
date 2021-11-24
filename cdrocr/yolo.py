@@ -198,7 +198,7 @@ class YOLO(object):
             for crop in crops:
                 plt.imshow(crop)
                 plt.show()
-        return crops
+        return boxes,crops
             
             
 
