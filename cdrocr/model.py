@@ -18,13 +18,20 @@ import matplotlib.pyplot as plt
 from .yolo import YOLO
 from .detector import CRAFT
 from .robust_scanner import RobustScanner
+from paddleocr import PaddleOCR
 import copy
+from difflib import get_close_matches
 #-------------------------
 # class
 #------------------------
+brand_list  =  ["B&H","JPGL","Capstan","Marise",
+                "Marlboro","Pallmall","Star","Sheikh",
+                "LD","Castle","Rally","Winston",
+                "Hollywood","Pilot","Real",
+                "Navy","Derby","Royals"]
 
 class OCR(object):
-    def __init__(self,model_dir,use_gpu=False):
+    def __init__(self,model_dir):
         '''
             Instantiates an ocr model:
             args:
@@ -39,7 +46,7 @@ class OCR(object):
         
         # detector weight loading and initialization
         try:
-            yolo_weights=os.path.join(model_dir,'yolo',"yolo.onnx")
+            yolo_weights=os.path.join(model_dir,'yolo',"best.onnx")
             self.yolo=YOLO(yolo_weights)
             LOG_INFO("YOLO Loaded")
             craft_weights=os.path.join(model_dir,'det',"craft.h5")
@@ -58,10 +65,13 @@ class OCR(object):
         except Exception as e:
             LOG_INFO(f"EXECUTION EXCEPTION: {e}",mcolor="red")
         
+        # engocr
+        self.engocr = PaddleOCR(use_angle_cls=True, lang='en',use_gpu=False)
+
         
             
     
-    def extract(self,img,batch_size=32,img_dim=(512,512),debug=False):
+    def extract(self,img,batch_size=32,debug=False):
         '''
             predict based on datatype
             args:
@@ -69,83 +79,91 @@ class OCR(object):
                 batch_size          :   batch size for inference
         '''
         try:
-            
-            nums=["0","1","2","3","4","5","6","7","8","9","০","১","২","৩","৪","৫","৬","৭","৮","৯"]
+        
+    
+            data={}
+
             if type(img)==str:
                 img=cv2.imread(img)
             img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+            base=np.copy(img)
             img,_=padDetectionImage(img)
             
             # yolo
-            ref_boxes=self.yolo.process(img)
+            res,ref_boxes=self.yolo.process(img)
             if debug:
-                for box in ref_boxes:
-                    x1,y1,x2,y2=box
-                    plt.imshow(img[y1:y2,x1:x2])
-                    plt.show()
-           
-                
-            
-            if len(ref_boxes)<1:
-                return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}
+                for k,v in res.items():
+                    print(k)
+                    if v is not None:
+                        plt.imshow(v["crop"])
+                        plt.show()
+
+            # age and number
+            num_labels=['age', 'mobile']
+            for num_label in num_labels:
+                if res[num_label] is not None:
+                    texts=self.numrec.recognize(None,None,image_list=[res[num_label]["crop"]],infer_len=12)
+                    data[num_label]=texts[0]
+                else:
+                    data[num_label]="Not Present In Image"
+            # name
+            if res["name"] is None:
+                data["name"]="Not Present In Image"
             else:
+                text_boxes,text_crops=self.craft.detect(img,debug=debug)
+                name_boxes=[]
+                name_crops=[]
+                for tbox,ncrop in zip(text_boxes,text_crops):
+                    idx=localize_box(tbox,[res["name"]["bbox"]])
+                    if idx==0:
+                        name_boxes.append(tbox)
+                        name_crops.append(ncrop)
                 
-                if len(ref_boxes)>0 and len(ref_boxes)<=2:
-                    crops=[]
-                    for box in ref_boxes:
-                        x1,y1,x2,y2=box
-                        crops.append(img[y1:y2,x1:x2])
-                    name=''
-                    age=''
-                    number=''
-                    texts=self.rec.recognize(None,None,image_list=crops,batch_size=batch_size)
-                    for text in texts:
-                        if len(text)==2 and text[0] in nums and text[1] in nums:
-                            age=text
-                        if len(text)>2 and text[0] in nums and text[-1] in nums:
-                            number=text
-                        else:
-                            name=text
-
-                    return {"name":name,"age":age,"number":number,"verdict":"low resolution image: could not detect properly/missing data in original image.probable results"}
-                
-                elif len(ref_boxes)==3:
-                    text_boxes,text_crops=self.craft.detect(img,debug=debug)
-                    
-                    crops=[]
-                    for box in ref_boxes:
-                        x1,y1,x2,y2=box
-                        crops.append(img[y1:y2,x1:x2])
-                        if debug:
-                            plt.imshow(img[y1:y2,x1:x2])
-                            plt.show()
-                    
-                    verdict=''
-                    age=crops[1]
-                    mobile=crops[2]
-                    # age and num
-                    texts=self.numrec.recognize(None,None,image_list=[age,mobile],batch_size=batch_size,infer_len=12)
-                    age=texts[0]
-                    mobile=texts[1]
-
-                    # name
-                    name_boxes=[]
-                    name_crops=[]
-                    for tbox,ncrop in zip(text_boxes,text_crops):
-                        idx=localize_box(tbox,ref_boxes)
-                        if idx==0:
-                            name_boxes.append(tbox)
-                            name_crops.append(ncrop)
+                if len(name_boxes)>0:
                     name_boxes,name_crops=zip(*sorted(zip(name_boxes,name_crops),key=lambda x: x[0][0]))            
-
-                    if debug:
-                        for c in name_crops:
-                            plt.imshow(c)
-                            plt.show()
                     name=self.rec.recognize(None,None,image_list=list(name_crops),batch_size=batch_size)
                     name=" ".join(name)
+                    data["name"]=name
+                else:
+                    name=self.rec.recognize(None,None,image_list=[res["name"]["bbox"]],batch_size=batch_size)
+                    data["name"]=name[0]
                     
-                    return {"name":name,"age":age,"number":mobile,"verdict":verdict}
+            # smoker
+            if res["smoker"] is None:
+                data["smoker"]="Not Present In Image"
+            else:
+                data["smoker"]="yes"
+            
+            dt_boxes,_= self.engocr.text_detector(base) 
+            dt_boxes=sorted_boxes(dt_boxes)
+
+            # brand
+            if res["brand"] is None:
+                data["brand"]="Not Present In Image"
+            else:
+                data["brand"]=""
+                for bno in range(len(dt_boxes)):
+                    tmp_box = copy.deepcopy(dt_boxes[bno])
+                    if debug:
+                        img_crop = get_rotate_crop_image(img,tmp_box)
+                        plt.imshow(img_crop)
+                        plt.show()
+                    x2,x1=int(max(tmp_box[:,0])),int(min(tmp_box[:,0]))
+                    y2,y1=int(max(tmp_box[:,1])),int(min(tmp_box[:,1]))
+                    idx=localize_box([x1,y1,x2,y2],[res["brand"]["bbox"]])
+                    if idx==0:
+                        try:
+                            img_crop = get_rotate_crop_image(img,tmp_box)
+                            texts=self.engocr.ocr(img_crop,det=False)
+                            brand=texts[0][0]
+                            brand=get_close_matches(brand,brand_list,n=1)[0]
+                            data["brand"]=brand
+                        except Exception as eb:
+                            data["brand"]="brand region Noisy/Low resolution.Try another image"
+
+            return data
         except Exception as e:
-            return {"name":'',"age":'',"number":'',"verdict":"low resolution image: could not detect"}    
+            print(data)
+            print(e)
+            return {"verdict":"low resolution image: could not detect"}    
 

@@ -152,20 +152,28 @@ def non_max_suppression(prediction,
         
     return to_numpy(output[0]) 
 
-
 class YOLO(object):
     def __init__(self,
                 model_weights,
                 providers=['CPUExecutionProvider'],
                 img_dim=(512,512),
                 graph_input="images",
-                classes=[0,1,2]):
+                classes=[0,1,2,3,4],
+                labels=['name', 'age', 'mobile', 'smoker', 'brand']):
         self.img_dim=img_dim
         self.classes=classes
         self.graph_input=graph_input
         self.model = ort.InferenceSession(model_weights, providers=providers)
+        self.labels=labels
     
-    def process(self,data):
+    def process(self,data,preproc=False):
+        if preproc:
+            if type(data)==str:
+                data=cv2.imread(data)
+            data=cv2.cvtColor(data,cv2.COLOR_BGR2RGB)
+            data,_=padDetectionImage(data)
+
+        img=np.copy(data)
         h,w,_=data.shape
         data=cv2.resize(data,self.img_dim)
         data=np.transpose(data,(2,0,1))
@@ -174,19 +182,22 @@ class YOLO(object):
         data=data.astype(np.float32)
         out=self.model.run(None,{"images":data})[0]
         bbox=non_max_suppression(out,classes=self.classes)
-        boxes=[]
+        
+        res={}
+        ref_boxes=[]
         for box in bbox:
-            x1,y1,x2,y2,_,_=box
+            x1,y1,x2,y2,_,cidx=box
             x1=int(w*(x1/self.img_dim[1]))
             y1=int(h*(y1/self.img_dim[0]))
             x2=int(w*(x2/self.img_dim[1]))
             y2=int(h*(y2/self.img_dim[0]))
             box=[x1,y1,x2,y2]
-            boxes.append(box)
+            ref_boxes.append(box)
+            res[self.labels[int(cidx)]]={"crop":img[y1:y2,x1:x2],
+                                         "bbox":[x1,y1,x2,y2]}
         
-        boxes=sorted(boxes,key=lambda x: x[1])
-        return boxes
-            
-            
-
-
+        for label in self.labels:
+            if label not in res.keys():
+                res[label]=None
+        
+        return res,ref_boxes
